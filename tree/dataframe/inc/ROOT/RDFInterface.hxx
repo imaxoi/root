@@ -94,6 +94,17 @@ namespace TTraits = ROOT::TypeTraits;
 * \brief The public interface to the RDataFrame federation of classes
 * \tparam T One of the "node" base types (e.g. RLoopManager, RFilterBase). The user never specifies this type manually.
 */
+
+template <typename Proxied, typename DataSource>
+class RInterface;
+
+template <typename DataSource>
+std::string Show(ROOT::RDF::RInterface<ROOT::Detail::RDF::RLoopManager, DataSource> filter);
+
+template <typename Proxied, typename DataSource>
+std::string Show(const ROOT::RDF::RInterface<Proxied, DataSource>& node);
+
+
 template <typename Proxied, typename DataSource = void>
 class RInterface {
    using DS_t = DataSource;
@@ -105,6 +116,9 @@ class RInterface {
    friend std::string cling::printValue(::ROOT::RDataFrame *tdf); // For a nice printing at the prompt
    template <typename T, typename W>
    friend class RInterface;
+
+   template <typename T, typename N>
+   friend std::string Show(const ROOT::RDF::RInterface<T, N>& node);
 
    const std::shared_ptr<Proxied> fProxiedPtr;     ///< Smart pointer to the graph node encapsulated by this RInterface.
    const std::weak_ptr<RLoopManager> fImplWeakPtr; ///< Weak pointer to the RLoopManager at the root of the graph.

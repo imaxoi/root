@@ -210,6 +210,11 @@ public:
    const std::map<std::string, std::string> &GetAliasMap() const { return fAliasColumnNameMap; }
    void RegisterCallback(ULong64_t everyNEvents, std::function<void(unsigned int)> &&f);
    unsigned int GetID() const { return fID; }
+
+   std::string Show(){
+      return "LOOP MANAGER";
+   }
+
 };
 } // end ns RDF
 } // end ns Detail
@@ -422,6 +427,7 @@ private:
    void *PartialUpdateImpl(...) { throw std::runtime_error("This action does not support callbacks yet!"); }
 };
 
+
 } // end NS RDF
 } // end NS Internal
 
@@ -554,6 +560,7 @@ public:
 };
 
 class RFilterBase {
+
 protected:
    RLoopManager *fLoopManager; ///< A raw pointer to the RLoopManager at the root of this functional graph. It is only
                                /// guaranteed to contain a valid address during an event loop.
@@ -623,6 +630,7 @@ public:
    void ClearValueReaders(unsigned int slot) override final;
    void InitNode() override final;
 };
+
 
 template <typename FilterF, typename PrevDataFrame>
 class RFilter final : public RFilterBase {
@@ -709,6 +717,10 @@ public:
    virtual void ClearValueReaders(unsigned int slot) final
    {
       RDFInternal::ResetRDFValueTuple(fValues[slot], TypeInd_t());
+   }
+
+   std::string Show(){
+      return fPrevData.Show() + " FILTER";
    }
 };
 
@@ -809,6 +821,10 @@ public:
       // propagate "children activation" upstream
       if (fNChildren == 1)
          fPrevData.IncrChildrenCount();
+   }
+
+   std::string Show(){
+      return fPrevData.Show() + " RANGE";
    }
 };
 

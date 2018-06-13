@@ -38,7 +38,6 @@ std::function<bool(ArgTypes...)> NotHelper(ROOT::TypeTraits::TypeList<ArgTypes..
 }
 } // namespace Internal
 
-
 namespace RDF {
 // clag-format off
 /// Given a callable with signature bool(T1, T2, ...) return a callable with same signature that returns the negated
@@ -55,6 +54,18 @@ auto Not(F &&f) -> decltype(ROOT::Internal::NotHelper(Args(), std::forward<F>(f)
    static_assert(std::is_same<Ret, bool>::value, "RDF::Not requires a callable that returns a bool.");
    return ROOT::Internal::NotHelper(Args(), std::forward<F>(f));
 }
+
+template <typename Proxied, typename DataSource>
+class RInterface;
+
+
+template <typename Proxied, typename DataSource>
+std::string Show(const ROOT::RDF::RInterface<Proxied, DataSource>& node)
+{
+   return node.fProxiedPtr->Show();
+}
+
+
 
 } // namespace RDF
 
