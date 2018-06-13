@@ -37,6 +37,20 @@
 
 namespace ROOT {
 namespace Internal {
+class ROperationGraphNode{
+public:
+   std::string type; //Filter, Range, Define, Action
+   std::vector<std::shared_ptr<ROperationGraphNode>> nextNodes;
+
+   ROperationGraphNode(std::string type){
+      this->type=type;
+   }
+
+   void addNext(ROperationGraphNode* node){
+      nextNodes.push_back(std::shared_ptr<ROperationGraphNode>(node));
+   }
+};
+
 namespace RDF {
 class RActionBase;
 
@@ -211,8 +225,8 @@ public:
    void RegisterCallback(ULong64_t everyNEvents, std::function<void(unsigned int)> &&f);
    unsigned int GetID() const { return fID; }
 
-   std::string Show(){
-      return "LOOP MANAGER";
+   ROOT::Internal::ROperationGraphNode* Show(){
+      return new ROOT::Internal::ROperationGraphNode("Loop Manager");
    }
 
 };
@@ -719,8 +733,10 @@ public:
       RDFInternal::ResetRDFValueTuple(fValues[slot], TypeInd_t());
    }
 
-   std::string Show(){
-      return fPrevData.Show() + " FILTER";
+   ROOT::Internal::ROperationGraphNode* Show(){
+      ROOT::Internal::ROperationGraphNode *node = new ROOT::Internal::ROperationGraphNode("Filter");
+
+      return fPrevData.Show()->addNext(node);
    }
 };
 
@@ -823,8 +839,10 @@ public:
          fPrevData.IncrChildrenCount();
    }
 
-   std::string Show(){
-      return fPrevData.Show() + " RANGE";
+   ROOT::Internal::ROperationGraphNode* Show(){
+      ROOT::Internal::ROperationGraphNode *node = new ROOT::Internal::ROperationGraphNode("Range");
+
+      return fPrevData.Show()->addNext(node);
    }
 };
 

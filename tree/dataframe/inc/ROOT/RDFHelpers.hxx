@@ -36,6 +36,9 @@ std::function<bool(ArgTypes...)> NotHelper(ROOT::TypeTraits::TypeList<ArgTypes..
 {
    return std::function<bool(ArgTypes...)>([=](ArgTypes... args) mutable { return !f(args...); });
 }
+
+class ROperationGraphNode;
+
 } // namespace Internal
 
 namespace RDF {
@@ -62,7 +65,14 @@ class RInterface;
 template <typename Proxied, typename DataSource>
 std::string Show(const ROOT::RDF::RInterface<Proxied, DataSource>& node)
 {
-   return node.fProxiedPtr->Show();
+   std::string summary;
+   std::shared_ptr<ROOT::Internal::ROperationGraphNode> graph(node.fProxiedPtr->Show());
+   while(!graph->nextNodes.empty()){
+      summary += graph->type;
+      graph=graph->nextNodes[0];
+   }
+
+   return summary;
 }
 
 
