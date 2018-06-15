@@ -336,14 +336,21 @@ void ResetRDFValueTuple(ValueTuple &values, std::index_sequence<S...>)
 }
 
 class RActionBase {
+   using RCustomColumnBasePtr_t = std::shared_ptr<RCustomColumnBase>;
+   using RcustomColumnBasePtrMap_t = std::map<std::string, RCustomColumnBasePtr_t>;
+
 protected:
    RLoopManager *fLoopManager; ///< A raw pointer to the RLoopManager at the root of this functional
                                /// graph. It is only guaranteed to contain a valid address during an
                                /// event loop.
    const unsigned int fNSlots; ///< Number of thread slots used by this node.
 
+   //- New pointer to the custom columns table
+   ColumnNames_t fValidCustomColumns;
+   RcustomColumnBasePtrMap_t fBookedCustomColumns;
+
 public:
-   RActionBase(RLoopManager *implPtr, const unsigned int nSlots);
+   RActionBase(RLoopManager *implPtr, const unsigned int nSlots, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns);
    RActionBase(const RActionBase &) = delete;
    RActionBase &operator=(const RActionBase &) = delete;
    virtual ~RActionBase() = default;
@@ -360,6 +367,8 @@ public:
 
 template <typename Helper, typename PrevDataFrame, typename ColumnTypes_t = typename Helper::ColumnTypes_t>
 class RAction final : public RActionBase {
+   using RCustomColumnBasePtr_t = std::shared_ptr<RCustomColumnBase>;
+   using RcustomColumnBasePtrMap_t = std::map<std::string, RCustomColumnBasePtr_t>;
    using TypeInd_t = std::make_index_sequence<ColumnTypes_t::list_size>;
 
    Helper fHelper;
@@ -368,8 +377,8 @@ class RAction final : public RActionBase {
    std::vector<RDFValueTuple_t<ColumnTypes_t>> fValues;
 
 public:
-   RAction(Helper &&h, const ColumnNames_t &bl, PrevDataFrame &pd)
-      : RActionBase(pd.GetLoopManagerUnchecked(), pd.GetLoopManagerUnchecked()->GetNSlots()), fHelper(std::move(h)),
+   RAction(Helper &&h, const ColumnNames_t &bl, PrevDataFrame &pd, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns)
+      : RActionBase(pd.GetLoopManagerUnchecked(), pd.GetLoopManagerUnchecked()->GetNSlots(), validCustomColumns, bookedCustomColumns), fHelper(std::move(h)),
         fBranches(bl), fPrevData(pd), fValues(fNSlots)
    {
    }
@@ -382,8 +391,9 @@ public:
 
    void InitSlot(TTreeReader *r, unsigned int slot) final
    {
-      InitRDFValues(slot, fValues[slot], r, fBranches, fLoopManager->GetCustomColumnNames(),
-                    fLoopManager->GetBookedColumns(), TypeInd_t());
+      InitRDFValues(slot, fValues[slot], r, fBranches, fValidCustomColumns,
+                    fBookedCustomColumns, TypeInd_t());
+
       fHelper.InitSlot(r, slot);
    }
 

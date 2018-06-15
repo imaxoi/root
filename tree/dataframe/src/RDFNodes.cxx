@@ -48,7 +48,7 @@ namespace ROOT {
 namespace Internal {
 namespace RDF {
 
-RActionBase::RActionBase(RLoopManager *implPtr, const unsigned int nSlots) : fLoopManager(implPtr), fNSlots(nSlots)
+RActionBase::RActionBase(RLoopManager *implPtr, const unsigned int nSlots, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns) : fLoopManager(implPtr), fNSlots(nSlots), fValidCustomColumns(validCustomColumns), fBookedCustomColumns(bookedCustomColumns)
 {
 }
 
@@ -58,7 +58,7 @@ RActionBase::RActionBase(RLoopManager *implPtr, const unsigned int nSlots) : fLo
 
 RCustomColumnBase::RCustomColumnBase(RLoopManager *implPtr, std::string_view name, const unsigned int nSlots,
                                      const bool isDSColumn)
-   : fLoopManager(implPtr), fName(name), fNSlots(nSlots), fIsDataSourceColumn(isDSColumn)
+   : fLoopManager(implPtr), fName(name), fNSlots(nSlots), fIsDataSourceColumn(isDSColumn),  fLastCheckedEntry(std::vector<Long64_t>(fNSlots, -1))
 {
 }
 
@@ -77,7 +77,6 @@ RLoopManager *RCustomColumnBase::GetLoopManagerUnchecked() const
 
 void RCustomColumnBase::InitNode()
 {
-   fLastCheckedEntry = std::vector<Long64_t>(fNSlots, -1);
 }
 
 RFilterBase::RFilterBase(RLoopManager *implPtr, std::string_view name, const unsigned int nSlots)

@@ -114,14 +114,17 @@ struct HistoUtils<T, true> {
    static bool HasAxisLimits(T &) { return true; }
 };
 
+using RCustomColumnBasePtr_t = std::shared_ptr<RCustomColumnBase>;
+using RcustomColumnBasePtrMap_t = std::map<std::string, RCustomColumnBasePtr_t>;
+
 // Generic filling (covers Histo2D, Histo3D, Profile1D and Profile2D actions, with and without weights)
 template <typename... BranchTypes, typename ActionType, typename ActionResultType, typename PrevNodeType>
 RActionBase *BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<ActionResultType> &h,
-                          const unsigned int nSlots, RLoopManager &loopManager, PrevNodeType &prevNode, ActionType *)
+                          const unsigned int nSlots, RLoopManager &loopManager, PrevNodeType &prevNode, ActionType *, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns)
 {
    using Helper_t = FillTOHelper<ActionResultType>;
    using Action_t = RAction<Helper_t, PrevNodeType, TTraits::TypeList<BranchTypes...>>;
-   auto action = std::make_shared<Action_t>(Helper_t(h, nSlots), bl, prevNode);
+   auto action = std::make_shared<Action_t>(Helper_t(h, nSlots), bl, prevNode, validCustomColumns, bookedCustomColumns);
    loopManager.Book(action);
    return action.get();
 }
@@ -129,7 +132,7 @@ RActionBase *BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<ActionR
 // Histo1D filling (must handle the special case of distinguishing FillTOHelper and FillHelper
 template <typename... BranchTypes, typename PrevNodeType>
 RActionBase *BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<::TH1D> &h, const unsigned int nSlots,
-                          RLoopManager &loopManager, PrevNodeType &prevNode, ActionTypes::Histo1D *)
+                          RLoopManager &loopManager, PrevNodeType &prevNode, ActionTypes::Histo1D *, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns)
 {
    auto hasAxisLimits = HistoUtils<::TH1D>::HasAxisLimits(*h);
 
@@ -137,13 +140,13 @@ RActionBase *BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<::TH1D>
    if (hasAxisLimits) {
       using Helper_t = FillTOHelper<::TH1D>;
       using Action_t = RAction<Helper_t, PrevNodeType, TTraits::TypeList<BranchTypes...>>;
-      auto action = std::make_shared<Action_t>(Helper_t(h, nSlots), bl, prevNode);
+      auto action = std::make_shared<Action_t>(Helper_t(h, nSlots), bl, prevNode, validCustomColumns, bookedCustomColumns);
       loopManager.Book(action);
       actionBase = action.get();
    } else {
       using Helper_t = FillHelper;
       using Action_t = RAction<Helper_t, PrevNodeType, TTraits::TypeList<BranchTypes...>>;
-      auto action = std::make_shared<Action_t>(Helper_t(h, nSlots), bl, prevNode);
+      auto action = std::make_shared<Action_t>(Helper_t(h, nSlots), bl, prevNode, validCustomColumns, bookedCustomColumns);
       loopManager.Book(action);
       actionBase = action.get();
    }
@@ -155,11 +158,11 @@ RActionBase *BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<::TH1D>
 template <typename BranchType, typename PrevNodeType, typename ActionResultType>
 RActionBase *
 BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<ActionResultType> &minV, const unsigned int nSlots,
-             RLoopManager &loopManager, PrevNodeType &prevNode, ActionTypes::Min *)
+             RLoopManager &loopManager, PrevNodeType &prevNode, ActionTypes::Min *, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns)
 {
    using Helper_t = MinHelper<ActionResultType>;
    using Action_t = RAction<Helper_t, PrevNodeType, TTraits::TypeList<BranchType>>;
-   auto action = std::make_shared<Action_t>(Helper_t(minV, nSlots), bl, prevNode);
+   auto action = std::make_shared<Action_t>(Helper_t(minV, nSlots), bl, prevNode, validCustomColumns, bookedCustomColumns);
    loopManager.Book(action);
    return action.get();
 }
@@ -168,11 +171,11 @@ BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<ActionResultType> &m
 template <typename BranchType, typename PrevNodeType, typename ActionResultType>
 RActionBase *
 BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<ActionResultType> &maxV, const unsigned int nSlots,
-             RLoopManager &loopManager, PrevNodeType &prevNode, ActionTypes::Max *)
+             RLoopManager &loopManager, PrevNodeType &prevNode, ActionTypes::Max *, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns)
 {
    using Helper_t = MaxHelper<ActionResultType>;
    using Action_t = RAction<Helper_t, PrevNodeType, TTraits::TypeList<BranchType>>;
-   auto action = std::make_shared<Action_t>(Helper_t(maxV, nSlots), bl, prevNode);
+   auto action = std::make_shared<Action_t>(Helper_t(maxV, nSlots), bl, prevNode, validCustomColumns, bookedCustomColumns);
    loopManager.Book(action);
    return action.get();
 }
@@ -181,11 +184,11 @@ BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<ActionResultType> &m
 template <typename BranchType, typename PrevNodeType, typename ActionResultType>
 RActionBase *
 BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<ActionResultType> &sumV, const unsigned int nSlots,
-             RLoopManager &loopManager, PrevNodeType &prevNode, ActionTypes::Sum *)
+             RLoopManager &loopManager, PrevNodeType &prevNode, ActionTypes::Sum *, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns)
 {
    using Helper_t = SumHelper<ActionResultType>;
    using Action_t = RAction<Helper_t, PrevNodeType, TTraits::TypeList<BranchType>>;
-   auto action = std::make_shared<Action_t>(Helper_t(sumV, nSlots), bl, prevNode);
+   auto action = std::make_shared<Action_t>(Helper_t(sumV, nSlots), bl, prevNode, validCustomColumns, bookedCustomColumns);
    loopManager.Book(action);
    return action.get();
 }
@@ -193,11 +196,11 @@ BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<ActionResultType> &s
 // Mean action
 template <typename BranchType, typename PrevNodeType>
 RActionBase *BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<double> &meanV, const unsigned int nSlots,
-                          RLoopManager &loopManager, PrevNodeType &prevNode, ActionTypes::Mean *)
+                          RLoopManager &loopManager, PrevNodeType &prevNode, ActionTypes::Mean *, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns)
 {
    using Helper_t = MeanHelper;
    using Action_t = RAction<Helper_t, PrevNodeType, TTraits::TypeList<BranchType>>;
-   auto action = std::make_shared<Action_t>(Helper_t(meanV, nSlots), bl, prevNode);
+   auto action = std::make_shared<Action_t>(Helper_t(meanV, nSlots), bl, prevNode, validCustomColumns, bookedCustomColumns);
    loopManager.Book(action);
    return action.get();
 }
@@ -319,7 +322,7 @@ void JitDefineHelper(F &&f, const ColumnNames_t &cols, std::string_view name, RL
 template <typename ActionType, typename... BranchTypes, typename PrevNodeType, typename ActionResultType>
 void CallBuildAndBook(PrevNodeType &prevNode, const ColumnNames_t &bl, const unsigned int nSlots,
                       const std::shared_ptr<ActionResultType> *rOnHeap,
-                      const std::shared_ptr<RActionBase *> *actionPtrPtrOnHeap)
+                      const std::shared_ptr<RActionBase *> *actionPtrPtrOnHeap, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns)
 {
    // if we are here it means we are jitting, if we are jitting the loop manager must be alive
    auto &loopManager = *prevNode.GetLoopManagerUnchecked();
@@ -328,8 +331,9 @@ void CallBuildAndBook(PrevNodeType &prevNode, const ColumnNames_t &bl, const uns
    auto ds = loopManager.GetDataSource();
    if (ds)
       DefineDataSourceColumns(bl, loopManager, *ds, std::make_index_sequence<nColumns>(), ColTypes_t());
+
    RActionBase *actionPtr =
-      BuildAndBook<BranchTypes...>(bl, *rOnHeap, nSlots, loopManager, prevNode, (ActionType *)nullptr);
+      BuildAndBook<BranchTypes...>(bl, *rOnHeap, nSlots, loopManager, prevNode, (ActionType *)nullptr, validCustomColumns, bookedCustomColumns);
    **actionPtrPtrOnHeap = actionPtr;
    delete rOnHeap;
    delete actionPtrPtrOnHeap;
