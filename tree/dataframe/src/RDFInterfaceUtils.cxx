@@ -554,6 +554,7 @@ void BookDefineJit(std::string_view name, std::string_view expression, RLoopMana
    const auto &aliasMap = lm.GetAliasMap();
    auto *const tree = lm.GetTree();
    const auto branches = tree ? RDFInternal::GetBranchNames(*tree) : ColumnNames_t();
+   //-TODO
    const auto &customColumns = lm.GetCustomColumnNames();
    const auto namespaceID = lm.GetID();
    const auto &dsColumns = ds ? ds->GetColumnNames() : ColumnNames_t{};

@@ -79,8 +79,8 @@ void RCustomColumnBase::InitNode()
 {
 }
 
-RFilterBase::RFilterBase(RLoopManager *implPtr, std::string_view name, const unsigned int nSlots)
-   : fLoopManager(implPtr), fLastResult(nSlots), fAccepted(nSlots), fRejected(nSlots), fName(name), fNSlots(nSlots)
+RFilterBase::RFilterBase(RLoopManager *implPtr, std::string_view name, const unsigned int nSlots, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns)
+   : fLoopManager(implPtr), fLastResult(nSlots), fAccepted(nSlots), fRejected(nSlots), fName(name), fNSlots(nSlots), fValidCustomColumns(validCustomColumns), fBookedCustomColumns(bookedCustomColumns)
 {
 }
 

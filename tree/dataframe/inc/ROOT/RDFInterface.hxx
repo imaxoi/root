@@ -170,9 +170,14 @@ public:
          RDFInternal::DefineDataSourceColumns(validColumnNames, *loopManager, *fDataSource,
                                               std::make_index_sequence<nColumns>(), ColTypes_t());
       using F_t = RDFDetail::RFilter<F, Proxied>;
-      auto FilterPtr = std::make_shared<F_t>(std::move(f), validColumnNames, *fProxiedPtr, name);
+      auto FilterPtr = std::make_shared<F_t>(std::move(f), validColumnNames, *fProxiedPtr, fValidCustomColumns, fBookedCustomColumns, name);
       loopManager->Book(FilterPtr);
-      return RInterface<F_t, DS_t>(FilterPtr, fImplWeakPtr, fValidCustomColumns, fDataSource);
+      RInterface<F_t, DS_t> newInterface(FilterPtr, fImplWeakPtr, fValidCustomColumns, fDataSource);
+
+      newInterface.fBookedCustomColumns = fBookedCustomColumns;
+      return newInterface;
+
+
    }
 
    ////////////////////////////////////////////////////////////////////////////
@@ -225,7 +230,7 @@ public:
       RInterface<typename decltype(upcastNode)::element_type> upcastInterface(upcastNode, fImplWeakPtr,
                                                                               fValidCustomColumns, fDataSource);
       const auto prevNodeTypeName = upcastInterface.GetNodeTypeName();
-      const auto jittedFilter = std::make_shared<RDFDetail::RJittedFilter>(df.get(), name);
+      const auto jittedFilter = std::make_shared<RDFDetail::RJittedFilter>(df.get(), name, fValidCustomColumns, fBookedCustomColumns);
       RDFInternal::BookFilterJit(jittedFilter.get(), upcastNode.get(), prevNodeTypeName, name, expression, aliasMap,
                                  branches, customColumns, tree, fDataSource, df->GetID());
 

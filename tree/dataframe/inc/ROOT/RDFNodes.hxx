@@ -564,6 +564,8 @@ public:
 };
 
 class RFilterBase {
+   using RCustomColumnBasePtr_t = std::shared_ptr<RCustomColumnBase>;
+   using RcustomColumnBasePtrMap_t = std::map<std::string, RCustomColumnBasePtr_t>;
 protected:
    RLoopManager *fLoopManager; ///< A raw pointer to the RLoopManager at the root of this functional graph. It is only
                                /// guaranteed to contain a valid address during an event loop.
@@ -576,8 +578,12 @@ protected:
    unsigned int fNStopsReceived{0}; ///< Number of times that a children node signaled to stop processing entries.
    const unsigned int fNSlots;      ///< Number of thread slots used by this node, inherited from parent node.
 
+   //- New pointer to the custom columns table
+   ColumnNames_t fValidCustomColumns;
+   RcustomColumnBasePtrMap_t fBookedCustomColumns;
+
 public:
-   RFilterBase(RLoopManager *df, std::string_view name, const unsigned int nSlots);
+   RFilterBase(RLoopManager *df, std::string_view name, const unsigned int nSlots, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns);
    RFilterBase &operator=(const RFilterBase &) = delete;
    virtual ~RFilterBase() = default;
 
@@ -613,10 +619,12 @@ public:
 // FIXME after switching to the new ownership model, RJittedFilter should avoid inheriting from RFilterBase and
 // overriding all of its methods: it can just implement them, and RFilterBase's can go back to have non-virtual methods
 class RJittedFilter final : public RFilterBase {
+   using RCustomColumnBasePtr_t = std::shared_ptr<RCustomColumnBase>;
+   using RcustomColumnBasePtrMap_t = std::map<std::string, RCustomColumnBasePtr_t>;
    std::unique_ptr<RFilterBase> fConcreteFilter = nullptr;
 
 public:
-   RJittedFilter(RLoopManager *lm, std::string_view name) : RFilterBase(lm, name, lm->GetNSlots()) {}
+   RJittedFilter(RLoopManager *lm, std::string_view name, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns) : RFilterBase(lm, name, lm->GetNSlots(), validCustomColumns, bookedCustomColumns) {}
 
    void SetFilter(std::unique_ptr<RFilterBase> f);
 
@@ -636,6 +644,8 @@ public:
 
 template <typename FilterF, typename PrevDataFrame>
 class RFilter final : public RFilterBase {
+   using RCustomColumnBasePtr_t = std::shared_ptr<RCustomColumnBase>;
+   using RcustomColumnBasePtrMap_t = std::map<std::string, RCustomColumnBasePtr_t>;
    using ColumnTypes_t = typename CallableTraits<FilterF>::arg_types;
    using TypeInd_t = std::make_index_sequence<ColumnTypes_t::list_size>;
 
@@ -645,8 +655,8 @@ class RFilter final : public RFilterBase {
    std::vector<RDFInternal::RDFValueTuple_t<ColumnTypes_t>> fValues;
 
 public:
-   RFilter(FilterF &&f, const ColumnNames_t &bl, PrevDataFrame &pd, std::string_view name = "")
-      : RFilterBase(pd.GetLoopManagerUnchecked(), name, pd.GetLoopManagerUnchecked()->GetNSlots()),
+   RFilter(FilterF &&f, const ColumnNames_t &bl, PrevDataFrame &pd, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns, std::string_view name = "")
+      : RFilterBase(pd.GetLoopManagerUnchecked(), name, pd.GetLoopManagerUnchecked()->GetNSlots(), validCustomColumns, bookedCustomColumns),
         fFilter(std::move(f)), fBranches(bl), fPrevData(pd), fValues(fNSlots)
    {
    }
@@ -682,8 +692,8 @@ public:
 
    void InitSlot(TTreeReader *r, unsigned int slot) final
    {
-      RDFInternal::InitRDFValues(slot, fValues[slot], r, fBranches, fLoopManager->GetCustomColumnNames(),
-                                 fLoopManager->GetBookedColumns(), TypeInd_t());
+      RDFInternal::InitRDFValues(slot, fValues[slot], r, fBranches, fValidCustomColumns,
+                                 fBookedCustomColumns, TypeInd_t());
    }
 
    // recursive chain of `Report`s
