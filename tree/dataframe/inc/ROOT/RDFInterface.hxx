@@ -1450,21 +1450,29 @@ public:
 private:
    void AddDefaultColumns()
    {
-      auto lm = GetLoopManager();
+
+      auto loopManager = GetLoopManager();
       ColumnNames_t validColNames = {};
 
       // Entry number column
       const auto entryColName = "tdfentry_";
       auto entryColGen = [](unsigned int, ULong64_t entry) { return entry; };
-      DefineImpl<decltype(entryColGen), RDFDetail::TCCHelperTypes::TSlotAndEntry>(entryColName, std::move(entryColGen),
-                                                                                  {});
+      /*DefineImpl<decltype(entryColGen), RDFDetail::TCCHelperTypes::TSlotAndEntry>(entryColName, std::move(entryColGen),
+                                                                                  {});*/
+      using NewColEntry_t = RDFDetail::RCustomColumn<decltype(entryColGen), RDFDetail::TCCHelperTypes::TSlotAndEntry>;
+
       fValidCustomColumns.emplace_back(entryColName);
+      fBookedCustomColumns[std::string(entryColName)] = std::make_shared<NewColEntry_t>(entryColName, std::move(entryColGen), fValidCustomColumns, loopManager.get());
 
       // Slot number column
       const auto slotColName = "tdfslot_";
       auto slotColGen = [](unsigned int slot) { return slot; };
-      DefineImpl<decltype(slotColGen), RDFDetail::TCCHelperTypes::TSlot>(slotColName, std::move(slotColGen), {});
+      /*DefineImpl<decltype(slotColGen), RDFDetail::TCCHelperTypes::TSlot>(slotColName, std::move(slotColGen), {});*/
+
+      using NewColSlot_t = RDFDetail::RCustomColumn<decltype(slotColGen), RDFDetail::TCCHelperTypes::TSlot>;
+
       fValidCustomColumns.emplace_back(slotColName);
+      fBookedCustomColumns[std::string(slotColName)] = std::make_shared<NewColSlot_t>(slotColName, std::move(slotColGen), fValidCustomColumns, loopManager.get());
    }
 
    ColumnNames_t ConvertRegexToColumns(std::string_view columnNameRegexp, std::string_view callerName)
