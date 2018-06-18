@@ -214,6 +214,39 @@ public:
    unsigned int GetID() const { return fID; }
 };
 
+class RCustomColumnBase {
+   using RCustomColumnBasePtr_t = std::shared_ptr<RCustomColumnBase>;
+   using RcustomColumnBasePtrMap_t = std::map<std::string, RCustomColumnBasePtr_t>;
+protected:
+   RLoopManager *fLoopManager; ///< A raw pointer to the RLoopManager at the root of this functional graph. It is only
+                               /// guaranteed to contain a valid address during an event loop.
+   const std::string fName;
+   unsigned int fNChildren{0};      ///< number of nodes of the functional graph hanging from this object
+   unsigned int fNStopsReceived{0}; ///< number of times that a children node signaled to stop processing entries.
+   const unsigned int fNSlots;      ///< number of thread slots used by this node, inherited from parent node.
+   const bool fIsDataSourceColumn; ///< does the custom column refer to a data-source column? (or a user-define column?)
+   std::vector<Long64_t> fLastCheckedEntry;
+
+   //- New pointer to the custom columns table
+   ColumnNames_t fValidCustomColumns;
+   RcustomColumnBasePtrMap_t fBookedCustomColumns;
+
+public:
+   RCustomColumnBase(RLoopManager *df, std::string_view name, const unsigned int nSlots, const bool isDSColumn, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns);
+   RCustomColumnBase &operator=(const RCustomColumnBase &) = delete;
+   virtual ~RCustomColumnBase(); // outlined defaulted.
+   virtual void InitSlot(TTreeReader *r, unsigned int slot) = 0;
+   virtual void *GetValuePtr(unsigned int slot) = 0;
+   virtual const std::type_info &GetTypeId() const = 0;
+   RLoopManager *GetLoopManagerUnchecked() const;
+   std::string GetName() const;
+   virtual void Update(unsigned int slot, Long64_t entry) = 0;
+   virtual void ClearValueReaders(unsigned int slot) = 0;
+   bool IsDataSourceColumn() const { return fIsDataSourceColumn; }
+   void InitNode();
+};
+
+
 } // end ns RDF
 } // end ns Detail
 
@@ -443,38 +476,6 @@ private:
 
 namespace Detail {
 namespace RDF {
-
-class RCustomColumnBase {
-   using RCustomColumnBasePtr_t = std::shared_ptr<RCustomColumnBase>;
-   using RcustomColumnBasePtrMap_t = std::map<std::string, RCustomColumnBasePtr_t>;
-protected:
-   RLoopManager *fLoopManager; ///< A raw pointer to the RLoopManager at the root of this functional graph. It is only
-                               /// guaranteed to contain a valid address during an event loop.
-   const std::string fName;
-   unsigned int fNChildren{0};      ///< number of nodes of the functional graph hanging from this object
-   unsigned int fNStopsReceived{0}; ///< number of times that a children node signaled to stop processing entries.
-   const unsigned int fNSlots;      ///< number of thread slots used by this node, inherited from parent node.
-   const bool fIsDataSourceColumn; ///< does the custom column refer to a data-source column? (or a user-define column?)
-   std::vector<Long64_t> fLastCheckedEntry;
-
-   //- New pointer to the custom columns table
-   ColumnNames_t fValidCustomColumns;
-   RcustomColumnBasePtrMap_t fBookedCustomColumns;
-
-public:
-   RCustomColumnBase(RLoopManager *df, std::string_view name, const unsigned int nSlots, const bool isDSColumn, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns);
-   RCustomColumnBase &operator=(const RCustomColumnBase &) = delete;
-   virtual ~RCustomColumnBase(); // outlined defaulted.
-   virtual void InitSlot(TTreeReader *r, unsigned int slot) = 0;
-   virtual void *GetValuePtr(unsigned int slot) = 0;
-   virtual const std::type_info &GetTypeId() const = 0;
-   RLoopManager *GetLoopManagerUnchecked() const;
-   std::string GetName() const;
-   virtual void Update(unsigned int slot, Long64_t entry) = 0;
-   virtual void ClearValueReaders(unsigned int slot) = 0;
-   bool IsDataSourceColumn() const { return fIsDataSourceColumn; }
-   void InitNode();
-};
 
 // clang-format off
 namespace TCCHelperTypes {
@@ -872,7 +873,6 @@ namespace RDF {
 template <typename T, bool B>
 void TColumnValue<T, B>::SetTmpColumn(unsigned int slot, ROOT::Detail::RDF::RCustomColumnBase *customColumn)
 {
-   std::cout << "SetTmpColumn called on " <<customColumn->GetName() <<std::endl;
    fCustomColumns.emplace_back(customColumn);
    if (customColumn->GetTypeId() != typeid(T))
       throw std::runtime_error(
@@ -880,11 +880,9 @@ void TColumnValue<T, B>::SetTmpColumn(unsigned int slot, ROOT::Detail::RDF::RCus
          TypeID2TypeName(typeid(T)) + " but temporary column has type " + TypeID2TypeName(customColumn->GetTypeId()));
 
    if (customColumn->IsDataSourceColumn()) {
-      std::cout <<"Found from datasource "<<std::endl;
       fColumnKind = EColumnKind::kDataSource;
       fDSValuePtrs.emplace_back(static_cast<T **>(customColumn->GetValuePtr(slot)));
    } else {
-      std::cout <<"Found from custom column "<<std::endl;
       fColumnKind = EColumnKind::kCustomColumn;
       fCustomValuePtrs.emplace_back(static_cast<T *>(customColumn->GetValuePtr(slot)));
    }

@@ -400,7 +400,7 @@ void RLoopManager::RunAndCheckFilters(unsigned int slot, Long64_t entry)
 void RLoopManager::InitNodeSlots(TTreeReader *r, unsigned int slot)
 {
    // booked branches must be initialized first because other nodes might need to point to the values they encapsulate
-   std::cout <<"RLoopManager::InitNodeSlots is about to call the initslots, fBookedCustomColumns: "<<fBookedCustomColumns.size() <<std::endl;
+
    for (auto &bookedBranch : fBookedCustomColumns)
       bookedBranch.second->InitSlot(r, slot);
    for (auto &ptr : fBookedActions)
