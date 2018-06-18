@@ -592,8 +592,8 @@ void RLoopManager::RegisterCallback(ULong64_t everyNEvents, std::function<void(u
 }
 
 RRangeBase::RRangeBase(RLoopManager *implPtr, unsigned int start, unsigned int stop, unsigned int stride,
-                       const unsigned int nSlots)
-   : fLoopManager(implPtr), fStart(start), fStop(stop), fStride(stride), fNSlots(nSlots)
+                       const unsigned int nSlots, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns)
+   : fLoopManager(implPtr), fStart(start), fStop(stop), fStride(stride), fNSlots(nSlots), fValidCustomColumns(validCustomColumns), fBookedCustomColumns(bookedCustomColumns)
 {
 }
 
