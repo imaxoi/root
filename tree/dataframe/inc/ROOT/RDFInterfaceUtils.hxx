@@ -261,10 +261,11 @@ std::vector<bool> FindUndefinedDSColumns(const ColumnNames_t &requestedCols, con
 template <typename T>
 void DefineDSColumnHelper(std::string_view name, RLoopManager &lm, RDataSource &ds)
 {
+   //- TODO: qui ho messo lm get custom, perchè non so da dove andarle a prendere!
    auto readers = ds.GetColumnReaders<T>(name);
    auto getValue = [readers](unsigned int slot) { return *readers[slot]; };
    using NewCol_t = RCustomColumn<decltype(getValue), TCCHelperTypes::TSlot>;
-   lm.Book(std::make_shared<NewCol_t>(name, std::move(getValue), ColumnNames_t{}, &lm, /*isDSColumn=*/true));
+   lm.Book(std::make_shared<NewCol_t>(name, std::move(getValue), ColumnNames_t{}, &lm, lm.GetCustomColumnNames(), lm.GetBookedColumns(), /*isDSColumn=*/true));
    lm.AddCustomColumnName(name);
    lm.AddDataSourceColumn(name);
 }

@@ -57,8 +57,8 @@ RActionBase::RActionBase(RLoopManager *implPtr, const unsigned int nSlots, Colum
 } // end NS ROOT
 
 RCustomColumnBase::RCustomColumnBase(RLoopManager *implPtr, std::string_view name, const unsigned int nSlots,
-                                     const bool isDSColumn)
-   : fLoopManager(implPtr), fName(name), fNSlots(nSlots), fIsDataSourceColumn(isDSColumn),  fLastCheckedEntry(std::vector<Long64_t>(fNSlots, -1))
+                                     const bool isDSColumn, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns)
+   : fLoopManager(implPtr), fName(name), fNSlots(nSlots), fIsDataSourceColumn(isDSColumn),  fLastCheckedEntry(std::vector<Long64_t>(fNSlots, -1)), fValidCustomColumns(validCustomColumns), fBookedCustomColumns(bookedCustomColumns)
 {
 }
 
@@ -400,6 +400,7 @@ void RLoopManager::RunAndCheckFilters(unsigned int slot, Long64_t entry)
 void RLoopManager::InitNodeSlots(TTreeReader *r, unsigned int slot)
 {
    // booked branches must be initialized first because other nodes might need to point to the values they encapsulate
+   std::cout <<"RLoopManager::InitNodeSlots is about to call the initslots, fBookedCustomColumns: "<<fBookedCustomColumns.size() <<std::endl;
    for (auto &bookedBranch : fBookedCustomColumns)
       bookedBranch.second->InitSlot(r, slot);
    for (auto &ptr : fBookedActions)

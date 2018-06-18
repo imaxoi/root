@@ -369,7 +369,10 @@ public:
 
       loopManager->AddColumnAlias(std::string(alias), validColumnName);
       RInterface<Proxied, DS_t> newInterface(fProxiedPtr, fImplWeakPtr, fValidCustomColumns, fDataSource);
+
+      newInterface.fBookedCustomColumns=fBookedCustomColumns;
       newInterface.fValidCustomColumns.emplace_back(alias);
+
       return newInterface;
    }
 
@@ -1457,22 +1460,20 @@ private:
       // Entry number column
       const auto entryColName = "tdfentry_";
       auto entryColGen = [](unsigned int, ULong64_t entry) { return entry; };
-      /*DefineImpl<decltype(entryColGen), RDFDetail::TCCHelperTypes::TSlotAndEntry>(entryColName, std::move(entryColGen),
-                                                                                  {});*/
+
       using NewColEntry_t = RDFDetail::RCustomColumn<decltype(entryColGen), RDFDetail::TCCHelperTypes::TSlotAndEntry>;
 
       fValidCustomColumns.emplace_back(entryColName);
-      fBookedCustomColumns[std::string(entryColName)] = std::make_shared<NewColEntry_t>(entryColName, std::move(entryColGen), fValidCustomColumns, loopManager.get());
+      fBookedCustomColumns[std::string(entryColName)] = std::make_shared<NewColEntry_t>(entryColName, std::move(entryColGen), fValidCustomColumns, loopManager.get(), fValidCustomColumns, fBookedCustomColumns);
 
       // Slot number column
       const auto slotColName = "tdfslot_";
       auto slotColGen = [](unsigned int slot) { return slot; };
-      /*DefineImpl<decltype(slotColGen), RDFDetail::TCCHelperTypes::TSlot>(slotColName, std::move(slotColGen), {});*/
 
       using NewColSlot_t = RDFDetail::RCustomColumn<decltype(slotColGen), RDFDetail::TCCHelperTypes::TSlot>;
 
       fValidCustomColumns.emplace_back(slotColName);
-      fBookedCustomColumns[std::string(slotColName)] = std::make_shared<NewColSlot_t>(slotColName, std::move(slotColGen), fValidCustomColumns, loopManager.get());
+      fBookedCustomColumns[std::string(slotColName)] = std::make_shared<NewColSlot_t>(slotColName, std::move(slotColGen), fValidCustomColumns, loopManager.get(), fValidCustomColumns, fBookedCustomColumns);
    }
 
    ColumnNames_t ConvertRegexToColumns(std::string_view columnNameRegexp, std::string_view callerName)
@@ -1622,14 +1623,15 @@ private:
 
       auto newValidCustomColumns(fValidCustomColumns);
       std::map<std::string, RCustomColumnBasePtr_t> newBookedCustomColumns(fBookedCustomColumns);
-
       newValidCustomColumns.emplace_back(name);
-      newBookedCustomColumns[std::string(name)] = std::make_shared<NewCol_t>(name, std::move(expression), newValidCustomColumns, loopManager.get());
+
+      newBookedCustomColumns[std::string(name)] = std::make_shared<NewCol_t>(name, std::move(expression), validColumnNames, loopManager.get(), fValidCustomColumns, fBookedCustomColumns);
+
+
 
       RInterface<Proxied> newInterface(fProxiedPtr, fImplWeakPtr, newValidCustomColumns, fDataSource);
+
       newInterface.fBookedCustomColumns=newBookedCustomColumns;
-      //- newInterface.fValidCustomColumns.emplace_back(name);
-      //- newInterface.fBookedCustomColumns[name] = std::make_shared<NewCol_t>(name, std::move(expression), validColumnNames, loopManager.get());
 
       return newInterface;
    }

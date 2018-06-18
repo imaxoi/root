@@ -71,6 +71,8 @@ public:
 
 namespace Detail {
 namespace RDF {
+   class RCustomColumnBase;
+
 using namespace ROOT::TypeTraits;
 namespace RDFInternal = ROOT::Internal::RDF;
 
@@ -211,6 +213,7 @@ public:
    void RegisterCallback(ULong64_t everyNEvents, std::function<void(unsigned int)> &&f);
    unsigned int GetID() const { return fID; }
 };
+
 } // end ns RDF
 } // end ns Detail
 
@@ -391,6 +394,9 @@ public:
 
    void InitSlot(TTreeReader *r, unsigned int slot) final
    {
+      for (auto &bookedBranch : fBookedCustomColumns)
+         bookedBranch.second->InitSlot(r, slot);
+
       InitRDFValues(slot, fValues[slot], r, fBranches, fValidCustomColumns,
                     fBookedCustomColumns, TypeInd_t());
 
@@ -439,6 +445,8 @@ namespace Detail {
 namespace RDF {
 
 class RCustomColumnBase {
+   using RCustomColumnBasePtr_t = std::shared_ptr<RCustomColumnBase>;
+   using RcustomColumnBasePtrMap_t = std::map<std::string, RCustomColumnBasePtr_t>;
 protected:
    RLoopManager *fLoopManager; ///< A raw pointer to the RLoopManager at the root of this functional graph. It is only
                                /// guaranteed to contain a valid address during an event loop.
@@ -449,8 +457,12 @@ protected:
    const bool fIsDataSourceColumn; ///< does the custom column refer to a data-source column? (or a user-define column?)
    std::vector<Long64_t> fLastCheckedEntry;
 
+   //- New pointer to the custom columns table
+   ColumnNames_t fValidCustomColumns;
+   RcustomColumnBasePtrMap_t fBookedCustomColumns;
+
 public:
-   RCustomColumnBase(RLoopManager *df, std::string_view name, const unsigned int nSlots, const bool isDSColumn);
+   RCustomColumnBase(RLoopManager *df, std::string_view name, const unsigned int nSlots, const bool isDSColumn, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns);
    RCustomColumnBase &operator=(const RCustomColumnBase &) = delete;
    virtual ~RCustomColumnBase(); // outlined defaulted.
    virtual void InitSlot(TTreeReader *r, unsigned int slot) = 0;
@@ -490,6 +502,8 @@ class RCustomColumn final : public RCustomColumnBase {
    // Avoid instantiating vector<bool> as `operator[]` returns temporaries in that case. Use std::deque instead.
    using ValuesPerSlot_t =
       typename std::conditional<std::is_same<ret_type, bool>::value, std::deque<ret_type>, std::vector<ret_type>>::type;
+   using RCustomColumnBasePtr_t = std::shared_ptr<RCustomColumnBase>;
+   using RcustomColumnBasePtrMap_t = std::map<std::string, RCustomColumnBasePtr_t>;
 
    F fExpression;
    const ColumnNames_t fBranches;
@@ -497,10 +511,12 @@ class RCustomColumn final : public RCustomColumnBase {
 
    std::vector<RDFInternal::RDFValueTuple_t<ColumnTypes_t>> fValues;
 
+   bool fIsInitialized=false;
+
 public:
-   RCustomColumn(std::string_view name, F &&expression, const ColumnNames_t &bl, RLoopManager *lm,
+   RCustomColumn(std::string_view name, F &&expression, const ColumnNames_t &bl, RLoopManager *lm,  ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns,
                  bool isDSColumn = false)
-      : RCustomColumnBase(lm, name, lm->GetNSlots(), isDSColumn), fExpression(std::move(expression)), fBranches(bl),
+      : RCustomColumnBase(lm, name, lm->GetNSlots(), isDSColumn, validCustomColumns, bookedCustomColumns), fExpression(std::move(expression)), fBranches(bl),
         fLastResults(fNSlots), fValues(fNSlots)
    {
    }
@@ -510,8 +526,11 @@ public:
 
    void InitSlot(TTreeReader *r, unsigned int slot) final
    {
-      RDFInternal::InitRDFValues(slot, fValues[slot], r, fBranches, fLoopManager->GetCustomColumnNames(),
-                                 fLoopManager->GetBookedColumns(), TypeInd_t());
+      if(fIsInitialized)
+         return;
+      RDFInternal::InitRDFValues(slot, fValues[slot], r, fBranches, fValidCustomColumns,
+                                 fBookedCustomColumns, TypeInd_t());
+      fIsInitialized=true;
    }
 
    void *GetValuePtr(unsigned int slot) final { return static_cast<void *>(&fLastResults[slot]); }
@@ -692,6 +711,9 @@ public:
 
    void InitSlot(TTreeReader *r, unsigned int slot) final
    {
+      for (auto &bookedBranch : fBookedCustomColumns)
+         bookedBranch.second->InitSlot(r, slot);
+
       RDFInternal::InitRDFValues(slot, fValues[slot], r, fBranches, fValidCustomColumns,
                                  fBookedCustomColumns, TypeInd_t());
    }
@@ -850,6 +872,7 @@ namespace RDF {
 template <typename T, bool B>
 void TColumnValue<T, B>::SetTmpColumn(unsigned int slot, ROOT::Detail::RDF::RCustomColumnBase *customColumn)
 {
+   std::cout << "SetTmpColumn called on " <<customColumn->GetName() <<std::endl;
    fCustomColumns.emplace_back(customColumn);
    if (customColumn->GetTypeId() != typeid(T))
       throw std::runtime_error(
@@ -857,9 +880,11 @@ void TColumnValue<T, B>::SetTmpColumn(unsigned int slot, ROOT::Detail::RDF::RCus
          TypeID2TypeName(typeid(T)) + " but temporary column has type " + TypeID2TypeName(customColumn->GetTypeId()));
 
    if (customColumn->IsDataSourceColumn()) {
+      std::cout <<"Found from datasource "<<std::endl;
       fColumnKind = EColumnKind::kDataSource;
       fDSValuePtrs.emplace_back(static_cast<T **>(customColumn->GetValuePtr(slot)));
    } else {
+      std::cout <<"Found from custom column "<<std::endl;
       fColumnKind = EColumnKind::kCustomColumn;
       fCustomValuePtrs.emplace_back(static_cast<T *>(customColumn->GetValuePtr(slot)));
    }
