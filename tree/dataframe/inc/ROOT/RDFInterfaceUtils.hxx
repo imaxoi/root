@@ -265,12 +265,14 @@ void DefineDSColumnHelper(std::string_view name, RLoopManager &lm, RDataSource &
    auto readers = ds.GetColumnReaders<T>(name);
    auto getValue = [readers](unsigned int slot) { return *readers[slot]; };
    using NewCol_t = RCustomColumn<decltype(getValue), TCCHelperTypes::TSlot>;
-   lm.Book(std::make_shared<NewCol_t>(name, std::move(getValue), ColumnNames_t{}, &lm, lm.GetCustomColumnNames(), lm.GetBookedColumns(), /*isDSColumn=*/true));
+   lm.Book(std::make_shared<NewCol_t>(name, std::move(getValue), ColumnNames_t{}, lm.GetNSlots(),
+                                      lm.GetCustomColumnNames(), lm.GetBookedColumns(), /*isDSColumn=*/true));
    lm.AddCustomColumnName(name);
    lm.AddDataSourceColumn(name);
 }
 
 /// Take a list of data-source column names and define the ones that haven't been defined yet.
+// TODO delete this, should be unused
 template <typename... ColumnTypes, std::size_t... S>
 void DefineDataSourceColumns(const std::vector<std::string> &columns, RLoopManager &lm, RDataSource &ds,
                              std::index_sequence<S...>, TTraits::TypeList<ColumnTypes...>)
@@ -284,6 +286,49 @@ void DefineDataSourceColumns(const std::vector<std::string> &columns, RLoopManag
       std::initializer_list<int> expander{
          (mustBeDefined[S] ? DefineDSColumnHelper<ColumnTypes>(columns[S], lm, ds) : /*no-op*/ ((void)0), 0)...};
       (void)expander; // avoid unused variable warnings
+   }
+}
+
+template <typename T>
+void AddDSColumnsHelper(std::string_view name, const std::map<std::string, RCustomColumnBasePtr_t> &currentCustomCols,
+                        const std::vector<std::string> &currentCustomColNames,
+                        std::map<std::string, RCustomColumnBasePtr_t> &newCustomCols,
+                        std::vector<std::string> &newNames, RDataSource &ds, unsigned int nSlots)
+{
+   auto readers = ds.GetColumnReaders<T>(name);
+   auto getValue = [readers](unsigned int slot) { return *readers[slot]; };
+   using NewCol_t = RCustomColumn<decltype(getValue), TCCHelperTypes::TSlot>;
+   auto newCol = std::make_shared<NewCol_t>(name, std::move(getValue), ColumnNames_t{}, nSlots, currentCustomColNames,
+                                            currentCustomCols, /*isDSColumn=*/true);
+   newCustomCols.insert(std::make_pair(std::string(name), newCol));
+   newNames.emplace_back(name);
+}
+
+// Take list of column names that must be defined, current map of custom columns, current list of defined column names,
+// and return a pair of new map of custom columns (with the new datasource columns added to it) and new list of defined
+// column names.
+template <typename... ColumnTypes, std::size_t... S>
+std::pair<std::map<std::string, RCustomColumnBasePtr_t>, std::vector<std::string>>
+AddDSColumns(const std::vector<std::string> &requiredCols,
+             const std::map<std::string, RCustomColumnBasePtr_t> &currentCustomCols,
+             const std::vector<std::string> &currentCustomColNames, RDataSource &ds, unsigned int nSlots,
+             std::index_sequence<S...>, TTraits::TypeList<ColumnTypes...>)
+{
+   const auto mustBeDefined = FindUndefinedDSColumns(requiredCols, currentCustomColNames);
+   if (std::none_of(mustBeDefined.begin(), mustBeDefined.end(), [](bool b) { return b; })) {
+      // no need to define any column
+      return std::make_pair(currentCustomCols, currentCustomColNames);
+   } else {
+      auto newCustomCols = currentCustomCols;
+      auto newNames = currentCustomColNames;
+      // hack to expand a template parameter pack without c++17 fold expressions.
+      int expander[] = {(mustBeDefined[S]
+                            ? AddDSColumnsHelper<ColumnTypes>(requiredCols[S], currentCustomCols, currentCustomColNames,
+                                                              newCustomCols, newNames, ds, nSlots)
+                            : /*no-op*/ ((void)0),
+                         0)...};
+      (void)expander; // avoid unused variable warnings
+      return std::make_pair(newCustomCols, newNames);
    }
 }
 

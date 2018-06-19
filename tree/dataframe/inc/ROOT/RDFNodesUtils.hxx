@@ -50,6 +50,7 @@ void InitRDFValues(unsigned int slot, RDFValueTuple &valueTuple, TTreeReader *r,
    // isTmpBranch has length bn.size(). Elements are true if the corresponding
    // branch is a temporary branch created with Define, false if they are
    // actual branches present in the TTree.
+   // TODO: evaluate this once, pass it down
    std::array<bool, sizeof...(S)> isTmpColumn;
    for (auto i = 0u; i < isTmpColumn.size(); ++i)
       isTmpColumn[i] = std::find(tmpbn.begin(), tmpbn.end(), bn.at(i)) != tmpbn.end();

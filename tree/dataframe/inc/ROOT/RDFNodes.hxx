@@ -206,6 +206,7 @@ public:
    void StopProcessing() { ++fNStopsReceived; }
    void ToJit(const std::string &s) { fToJit.append(s); }
    const ColumnNames_t &GetDefinedDataSourceColumns() const { return fDefinedDataSourceColumns; }
+   // TODO unused, remove
    void AddDataSourceColumn(std::string_view name) { fDefinedDataSourceColumns.emplace_back(name); }
    void AddColumnAlias(const std::string &alias, const std::string &colName) { fAliasColumnNameMap[alias] = colName; }
    void AddCustomColumnName(std::string_view name) { fCustomColumnNames.emplace_back(name); }
@@ -218,8 +219,6 @@ class RCustomColumnBase {
    using RCustomColumnBasePtr_t = std::shared_ptr<RCustomColumnBase>;
    using RcustomColumnBasePtrMap_t = std::map<std::string, RCustomColumnBasePtr_t>;
 protected:
-   RLoopManager *fLoopManager; ///< A raw pointer to the RLoopManager at the root of this functional graph. It is only
-                               /// guaranteed to contain a valid address during an event loop.
    const std::string fName;
    unsigned int fNChildren{0};      ///< number of nodes of the functional graph hanging from this object
    unsigned int fNStopsReceived{0}; ///< number of times that a children node signaled to stop processing entries.
@@ -232,7 +231,8 @@ protected:
    RcustomColumnBasePtrMap_t fBookedCustomColumns;
 
 public:
-   RCustomColumnBase(RLoopManager *df, std::string_view name, const unsigned int nSlots, const bool isDSColumn, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns);
+   RCustomColumnBase(std::string_view name, const unsigned int nSlots, const bool isDSColumn,
+                     ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns);
    RCustomColumnBase &operator=(const RCustomColumnBase &) = delete;
    virtual ~RCustomColumnBase(); // outlined defaulted.
    virtual void InitSlot(TTreeReader *r, unsigned int slot) = 0;
@@ -515,10 +515,11 @@ class RCustomColumn final : public RCustomColumnBase {
    bool fIsInitialized=false;
 
 public:
-   RCustomColumn(std::string_view name, F &&expression, const ColumnNames_t &bl, RLoopManager *lm,  ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns,
+   RCustomColumn(std::string_view name, F &&expression, const ColumnNames_t &bl, unsigned int nSlots,
+                 ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns,
                  bool isDSColumn = false)
-      : RCustomColumnBase(lm, name, lm->GetNSlots(), isDSColumn, validCustomColumns, bookedCustomColumns), fExpression(std::move(expression)), fBranches(bl),
-        fLastResults(fNSlots), fValues(fNSlots)
+      : RCustomColumnBase(name, nSlots, isDSColumn, validCustomColumns, bookedCustomColumns),
+        fExpression(std::move(expression)), fBranches(bl), fLastResults(fNSlots), fValues(fNSlots)
    {
    }
 
