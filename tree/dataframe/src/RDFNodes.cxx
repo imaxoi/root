@@ -56,9 +56,11 @@ RActionBase::RActionBase(RLoopManager *implPtr, const unsigned int nSlots, Colum
 } // end NS Internal
 } // end NS ROOT
 
-RCustomColumnBase::RCustomColumnBase(RLoopManager *implPtr, std::string_view name, const unsigned int nSlots,
-                                     const bool isDSColumn, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns)
-   : fLoopManager(implPtr), fName(name), fNSlots(nSlots), fIsDataSourceColumn(isDSColumn),  fLastCheckedEntry(std::vector<Long64_t>(fNSlots, -1)), fValidCustomColumns(validCustomColumns), fBookedCustomColumns(bookedCustomColumns)
+RCustomColumnBase::RCustomColumnBase(std::string_view name, const unsigned int nSlots, const bool isDSColumn,
+                                     ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns)
+   : fName(name), fNSlots(nSlots), fIsDataSourceColumn(isDSColumn),
+     fLastCheckedEntry(std::vector<Long64_t>(fNSlots, -1)), fValidCustomColumns(validCustomColumns),
+     fBookedCustomColumns(bookedCustomColumns)
 {
 }
 
@@ -68,11 +70,6 @@ RCustomColumnBase::~RCustomColumnBase() = default;
 std::string RCustomColumnBase::GetName() const
 {
    return fName;
-}
-
-RLoopManager *RCustomColumnBase::GetLoopManagerUnchecked() const
-{
-   return fLoopManager;
 }
 
 void RCustomColumnBase::InitNode()
