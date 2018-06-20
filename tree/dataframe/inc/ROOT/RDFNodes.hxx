@@ -617,12 +617,17 @@ protected:
    unsigned int fNStopsReceived{0}; ///< Number of times that a children node signaled to stop processing entries.
    const unsigned int fNSlots;      ///< Number of thread slots used by this node, inherited from parent node.
 
-   //- New pointer to the custom columns table
+   //- TODO: Remove this two old members
    ColumnNames_t fValidCustomColumns;
    RcustomColumnBasePtrMap_t fBookedCustomColumns;
 
+   RDFInternal::RBookedCustomColumns fCustomColumns;
+
 public:
+   //- TODO: Remove this old constructor
    RFilterBase(RLoopManager *df, std::string_view name, const unsigned int nSlots, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns);
+
+   RFilterBase(RLoopManager *df, std::string_view name, const unsigned int nSlots, RDFInternal::RBookedCustomColumns customColumns);
    RFilterBase &operator=(const RFilterBase &) = delete;
    virtual ~RFilterBase() = default;
 
@@ -694,8 +699,15 @@ class RFilter final : public RFilterBase {
    std::vector<RDFInternal::RDFValueTuple_t<ColumnTypes_t>> fValues;
 
 public:
+   //- TODO: Remove this old constructor
    RFilter(FilterF &&f, const ColumnNames_t &bl, PrevDataFrame &pd, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns, std::string_view name = "")
       : RFilterBase(pd.GetLoopManagerUnchecked(), name, pd.GetLoopManagerUnchecked()->GetNSlots(), validCustomColumns, bookedCustomColumns),
+        fFilter(std::move(f)), fBranches(bl), fPrevData(pd), fValues(fNSlots)
+   {
+   }
+
+   RFilter(FilterF &&f, const ColumnNames_t &bl, PrevDataFrame &pd, RDFInternal::RBookedCustomColumns customColumns, std::string_view name = "")
+      : RFilterBase(pd.GetLoopManagerUnchecked(), name, pd.GetLoopManagerUnchecked()->GetNSlots(), customColumns),
         fFilter(std::move(f)), fBranches(bl), fPrevData(pd), fValues(fNSlots)
    {
    }

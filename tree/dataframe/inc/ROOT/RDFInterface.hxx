@@ -170,21 +170,19 @@ public:
       using ColTypes_t = typename TTraits::CallableTraits<F>::arg_types;
       constexpr auto nColumns = ColTypes_t::list_size;
       const auto validColumnNames =
-         RDFInternal::GetValidatedColumnNames(*loopManager, nColumns, columns, fValidCustomColumns, fDataSource);
+         RDFInternal::GetValidatedColumnNames(*loopManager, nColumns, columns, *(fCustomColumns.fCustomColumnsNames), fDataSource);
 
       auto newColumns =
          fDataSource
-            ? RDFInternal::AddDSColumns(validColumnNames, fBookedCustomColumns, fValidCustomColumns, *fDataSource,
+            ? RDFInternal::AddDSColumns(validColumnNames, fCustomColumns, *fDataSource,
                                         loopManager->GetNSlots(), std::make_index_sequence<nColumns>(), ColTypes_t())
-            : std::make_pair(fBookedCustomColumns, fValidCustomColumns);
+            : fCustomColumns;
 
       using F_t = RDFDetail::RFilter<F, Proxied>;
       auto FilterPtr =
-         std::make_shared<F_t>(std::move(f), validColumnNames, *fProxiedPtr, newColumns.second, newColumns.first, name);
+         std::make_shared<F_t>(std::move(f), validColumnNames, *fProxiedPtr, newColumns, name);
       loopManager->Book(FilterPtr);
-      RInterface<F_t, DS_t> newInterface(FilterPtr, fImplWeakPtr, newColumns.second, fDataSource);
-
-      newInterface.fBookedCustomColumns = newColumns.first;
+      RInterface<F_t, DS_t> newInterface(FilterPtr, fImplWeakPtr, newColumns, fDataSource);
       return newInterface;
    }
 
@@ -228,7 +226,8 @@ public:
    /// Refer to the first overload of this method for the full documentation.
    RInterface<RDFDetail::RJittedFilter, DS_t> Filter(std::string_view expression, std::string_view name = "")
    {
-      auto df = GetLoopManager();
+      //- TODO: It's JITTING
+      /*auto df = GetLoopManager();
       const auto &aliasMap = df->GetAliasMap();
       auto *const tree = df->GetTree();
       const auto branches = tree ? RDFInternal::GetBranchNames(*tree) : ColumnNames_t();
@@ -245,7 +244,7 @@ public:
       df->Book(jittedFilter);
       auto newInterface= RInterface<RDFDetail::RJittedFilter, DS_t>(jittedFilter, fImplWeakPtr, fValidCustomColumns, fDataSource);
       newInterface.fBookedCustomColumns = fBookedCustomColumns;
-      return newInterface;
+      return newInterface;*/
    }
 
    // clang-format off
@@ -344,6 +343,8 @@ public:
    /// Refer to the first overload of this method for the full documentation.
    RInterface<Proxied, DS_t> Define(std::string_view name, std::string_view expression)
    {
+      //- TODO: It's JITTED
+      /*
       auto lm = GetLoopManager();
       // this check must be done before jitting lest we throw exceptions in jitted code
       RDFInternal::CheckCustomColumn(name, lm->GetTree(), fValidCustomColumns,
@@ -354,6 +355,7 @@ public:
       RInterface<Proxied, DS_t> newInterface(fProxiedPtr, fImplWeakPtr, fValidCustomColumns, fDataSource);
       newInterface.fValidCustomColumns.emplace_back(name);
       return newInterface;
+      */
    }
 
    ////////////////////////////////////////////////////////////////////////////
@@ -372,17 +374,14 @@ public:
       auto &dsColumnNames = fDataSource ? fDataSource->GetColumnNames() : ColumnNames_t{};
 
       // If the alias name is a column name, there is a problem
-      RDFInternal::CheckCustomColumn(alias, loopManager->GetTree(), fValidCustomColumns, dsColumnNames);
+      RDFInternal::CheckCustomColumn(alias, loopManager->GetTree(), *(fCustomColumns.fCustomColumnsNames), dsColumnNames);
 
-      const auto validColumnName = RDFInternal::GetValidatedColumnNames(*loopManager, 1, {std::string(columnName)},
-                                                                        fValidCustomColumns, fDataSource)[0];
+      const auto validColumnName = RDFInternal::GetValidatedColumnNames(*loopManager, 1, {std::string(columnName)},*(fCustomColumns.fCustomColumnsNames), fDataSource)[0];
 
       loopManager->AddColumnAlias(std::string(alias), validColumnName);
-      RInterface<Proxied, DS_t> newInterface(fProxiedPtr, fImplWeakPtr, fValidCustomColumns, fDataSource);
+      RInterface<Proxied, DS_t> newInterface(fProxiedPtr, fImplWeakPtr, fCustomColumns, fDataSource);
 
-      newInterface.fBookedCustomColumns=fBookedCustomColumns;
-      newInterface.fValidCustomColumns.emplace_back(alias);
-
+      fCustomColumns.fCustomColumnsNames->emplace_back(alias);
       return newInterface;
    }
 

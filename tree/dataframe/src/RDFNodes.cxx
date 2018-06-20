@@ -84,8 +84,14 @@ void RCustomColumnBase::InitNode()
 {
 }
 
+//- TODO: Remove this old constructor
 RFilterBase::RFilterBase(RLoopManager *implPtr, std::string_view name, const unsigned int nSlots, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns)
    : fLoopManager(implPtr), fLastResult(nSlots), fAccepted(nSlots), fRejected(nSlots), fName(name), fNSlots(nSlots), fValidCustomColumns(validCustomColumns), fBookedCustomColumns(bookedCustomColumns)
+{
+}
+
+RFilterBase::RFilterBase(RLoopManager *implPtr, std::string_view name, const unsigned int nSlots, RDFInternal::RBookedCustomColumns customColumns)
+   : fLoopManager(implPtr), fLastResult(nSlots), fAccepted(nSlots), fRejected(nSlots), fName(name), fNSlots(nSlots), fCustomColumns(customColumns)
 {
 }
 
