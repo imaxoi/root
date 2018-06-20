@@ -1579,13 +1579,13 @@ private:
       const auto nSlots = lm->GetNSlots();
       auto newColumns =
          fDataSource
-            ? RDFInternal::AddDSColumns(selectedCols, fBookedCustomColumns, fValidCustomColumns, *fDataSource,
+            ? RDFInternal::AddDSColumns(selectedCols, fCustomColumns, *fDataSource,
                                         nSlots, std::make_index_sequence<nColumns>(), RDFInternal::TypeList<BranchTypes...>())
-            : std::make_pair(fBookedCustomColumns, fValidCustomColumns);
-
-      auto actionPtr =
-         RDFInternal::BuildAndBook<BranchTypes...>(selectedCols, r, nSlots, *lm, *fProxiedPtr, (ActionType *)nullptr, newColumns.second, newColumns.first);
-      return MakeResultPtr(r, lm, actionPtr);
+            : fCustomColumns;
+      //- HERE
+      /*auto actionPtr =
+         RDFInternal::BuildAndBook<BranchTypes...>(selectedCols, r, nSlots, *lm, *fProxiedPtr, (ActionType *)nullptr, newColumns);
+      return MakeResultPtr(r, lm, actionPtr);*/
    }
 
    // User did not specify type, do type inference
