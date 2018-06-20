@@ -343,6 +343,7 @@ void JitFilterHelper(F &&f, const ColumnNames_t &cols, std::string_view name, RJ
    constexpr auto nColumns = ColTypes_t::list_size;
    RDFInternal::CheckFilter(f);
    auto &lm = *jittedFilter->GetLoopManagerUnchecked(); // RLoopManager must exist at this time
+   //- Todo this can't work, the new one has to be used
    auto ds = lm.GetDataSource();
    if (ds)
       RDFInternal::DefineDataSourceColumns(cols, lm, *ds, std::make_index_sequence<nColumns>(), ColTypes_t());
@@ -358,6 +359,7 @@ void JitDefineHelper(F &&f, const ColumnNames_t &cols, std::string_view name, RL
    constexpr auto nColumns = ColTypes_t::list_size;
 
    auto ds = lm->GetDataSource();
+   //- TODO: This can't work, the new one must be used
    if (ds)
       RDFInternal::DefineDataSourceColumns(cols, *lm, *ds, std::make_index_sequence<nColumns>(), ColTypes_t());
 
