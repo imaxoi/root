@@ -31,6 +31,7 @@
 #include "ROOT/RDFHistoModels.hxx"
 #include "ROOT/RDFInterfaceUtils.hxx"
 #include "ROOT/RDFNodes.hxx"
+#include "ROOT/RDFBookedCustomColumns.hxx"
 #include "ROOT/RDFNodesUtils.hxx"
 #include "ROOT/RDFUtils.hxx"
 #include "ROOT/RDataSource.hxx"
@@ -114,6 +115,8 @@ class RInterface {
    RDataSource *const fDataSource = nullptr;
 
    std::map<std::string, RCustomColumnBasePtr_t> fBookedCustomColumns;
+
+   RDFInternal::RBookedCustomColumns fCustomColumns;
 
 public:
    ////////////////////////////////////////////////////////////////////////////
@@ -1655,7 +1658,7 @@ private:
 
       newBookedCustomColumns[std::string(name)] =
          std::make_shared<NewCol_t>(name, std::move(expression), validColumnNames, loopManager->GetNSlots(),
-                                    fValidCustomColumns, fBookedCustomColumns);
+                                    newValidCustomColumns, newBookedCustomColumns);
 
       RInterface<Proxied> newInterface(fProxiedPtr, fImplWeakPtr, newValidCustomColumns, fDataSource);
 
@@ -1774,14 +1777,13 @@ private:
                                         GetLoopManager()->GetNSlots(), s, TTraits::TypeList<BranchTypes...>())
             : std::make_pair(fBookedCustomColumns, fValidCustomColumns);
 
+            fBookedCustomColumns=newColumns.first;
+            fValidCustomColumns=newColumns.second;
+
       auto colHolders = std::make_tuple(Take<BranchTypes>(columnList[S])...);
       auto ds = std::make_unique<RLazyDS<BranchTypes...>>(std::make_pair(columnList[S], std::get<S>(colHolders))...);
 
       RInterface<RLoopManager> cachedRDF(std::make_shared<RLoopManager>(std::move(ds), columnList));
-      cachedRDF.fBookedCustomColumns.insert(newColumns.first.begin(), newColumns.first.end());
-
-      cachedRDF.fValidCustomColumns.insert(cachedRDF.fValidCustomColumns.begin(), newColumns.second.begin(), newColumns.second.end());
-
       return cachedRDF;
    }
 
