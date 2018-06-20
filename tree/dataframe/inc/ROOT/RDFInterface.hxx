@@ -114,10 +114,7 @@ class RInterface {
    /// Non-owning pointer to a data-source object. Null if no data-source. RLoopManager has ownership of the object.
    RDataSource *const fDataSource = nullptr;
 
-   //- TODO: Remove these two
-   ColumnNames_t fValidCustomColumns; ///< Names of columns `Define`d for this branch of the functional graph.
-   std::map<std::string, RCustomColumnBasePtr_t> fBookedCustomColumns;
-
+   /// Contains the custom columns defined up to this node.
    RDFInternal::RBookedCustomColumns fCustomColumns;
 
 public:
@@ -137,7 +134,7 @@ public:
    /// \brief Only enabled when building a RInterface<RLoopManager>
    template <typename T = Proxied, typename std::enable_if<std::is_same<T, RLoopManager>::value, int>::type = 0>
    RInterface(const std::shared_ptr<Proxied> &proxied)
-      : fProxiedPtr(proxied), fImplWeakPtr(proxied), fValidCustomColumns(), fDataSource(proxied->GetDataSource())
+      : fProxiedPtr(proxied), fImplWeakPtr(proxied), fDataSource(proxied->GetDataSource())
    {
       AddDefaultColumns();
    }
@@ -750,7 +747,7 @@ public:
       auto loopManager = GetLoopManager();
       const auto columns = column.empty() ? ColumnNames_t() : ColumnNames_t({std::string(column)});
       const auto selectedCols =
-         RDFInternal::GetValidatedColumnNames(*loopManager, 1, columns, fValidCustomColumns, fDataSource);
+         RDFInternal::GetValidatedColumnNames(*loopManager, 1, columns, *(fCustomColumns.fCustomColumnsNames), fDataSource);
 
       auto newColumns =
          fDataSource
@@ -1487,7 +1484,7 @@ private:
 
       fCustomColumns.fCustomColumnsNames->emplace_back(entryColName);
       (*(fCustomColumns.fCustomColumns))[std::string(entryColName)] =
-         std::make_shared<NewColEntry_t>(entryColName, std::move(entryColGen), fValidCustomColumns,
+         std::make_shared<NewColEntry_t>(entryColName, std::move(entryColGen), *(fCustomColumns.fCustomColumnsNames),
                                          loopManager->GetNSlots(), fCustomColumns);
 
       // Slot number column
@@ -1498,7 +1495,7 @@ private:
 
       fCustomColumns.fCustomColumnsNames->emplace_back(slotColName);
       (*(fCustomColumns.fCustomColumns))[std::string(slotColName)] =
-         std::make_shared<NewColSlot_t>(slotColName, std::move(slotColGen), fValidCustomColumns,
+         std::make_shared<NewColSlot_t>(slotColName, std::move(slotColGen), *(fCustomColumns.fCustomColumnsNames),
                                         loopManager->GetNSlots(), fCustomColumns);
    }
 
@@ -1521,7 +1518,7 @@ private:
       // we need to use TRegexp
       TRegexp regexp(theRegex);
       int dummy;
-      for (auto &&branchName : fValidCustomColumns) {
+      for (auto &&branchName : *(fCustomColumns.fCustomColumnsNames)) {
          if ((isEmptyRegex || -1 != regexp.Index(branchName.c_str(), &dummy)) &&
              !RDFInternal::IsInternalColumn(branchName)) {
             selectedColumns.emplace_back(branchName);
@@ -1696,7 +1693,7 @@ private:
 
       auto lm = GetLoopManager();
       const auto validCols =
-         RDFInternal::GetValidatedColumnNames(*lm, columnList.size(), columnList, fValidCustomColumns, fDataSource);
+         RDFInternal::GetValidatedColumnNames(*lm, columnList.size(), columnList, *(fCustomColumns.fCustomColumnsNames), fDataSource);
 
       auto newColumns =
          fDataSource
@@ -1789,13 +1786,6 @@ protected:
          throw std::runtime_error("The main RDataFrame is not reachable: did it go out of scope?");
       }
       return df;
-   }
-
-   //- TODO:Remove this old constructor
-   RInterface(const std::shared_ptr<Proxied> &proxied, const std::weak_ptr<RLoopManager> &impl,
-              const ColumnNames_t &validColumns, RDataSource *ds)
-      : fProxiedPtr(proxied), fImplWeakPtr(impl), fValidCustomColumns(validColumns), fDataSource(ds)
-   {
    }
 
    RInterface(const std::shared_ptr<Proxied> &proxied, const std::weak_ptr<RLoopManager> &impl, RDFInternal::RBookedCustomColumns columns, RDataSource *ds)
