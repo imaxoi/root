@@ -125,7 +125,7 @@ RActionBase *BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<ActionR
 {
    using Helper_t = FillTOHelper<ActionResultType>;
    using Action_t = RAction<Helper_t, PrevNodeType, TTraits::TypeList<BranchTypes...>>;
-   auto action = std::make_shared<Action_t>(Helper_t(h, nSlots), bl, customColumns);
+   auto action = std::make_shared<Action_t>(Helper_t(h, nSlots), bl, prevNode, customColumns);
    loopManager.Book(action);
    return action.get();
 }
@@ -147,7 +147,7 @@ RActionBase *BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<::TH1D>
    } else {
       using Helper_t = FillHelper;
       using Action_t = RAction<Helper_t, PrevNodeType, TTraits::TypeList<BranchTypes...>>;
-      auto action = std::make_shared<Action_t>(Helper_t(h, nSlots), bl, customColumns);
+      auto action = std::make_shared<Action_t>(Helper_t(h, nSlots), bl, prevNode, customColumns);
       loopManager.Book(action);
       actionBase = action.get();
    }
@@ -159,7 +159,7 @@ RActionBase *BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<::TH1D>
 template <typename BranchType, typename PrevNodeType, typename ActionResultType>
 RActionBase *
 BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<ActionResultType> &minV, const unsigned int nSlots,
-             RLoopManager &loopManager, PrevNodeType &prevNode, ActionTypes::Min *, ColumnNames_t validCustomColumns, RDFInternal::RBookedCustomColumns customColumns)
+             RLoopManager &loopManager, PrevNodeType &prevNode, ActionTypes::Min *,  RDFInternal::RBookedCustomColumns customColumns)
 {
    using Helper_t = MinHelper<ActionResultType>;
    using Action_t = RAction<Helper_t, PrevNodeType, TTraits::TypeList<BranchType>>;
@@ -197,7 +197,8 @@ BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<ActionResultType> &s
 // Mean action
 template <typename BranchType, typename PrevNodeType>
 RActionBase *BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<double> &meanV, const unsigned int nSlots,
-                          RLoopManager &loopManager, PrevNodeType &prevNode, RDFInternal::RBookedCustomColumns customColumns)
+                          RLoopManager &loopManager, PrevNodeType &prevNode,
+                          ActionTypes::Mean *, RDFInternal::RBookedCustomColumns customColumns)
 {
    using Helper_t = MeanHelper;
    using Action_t = RAction<Helper_t, PrevNodeType, TTraits::TypeList<BranchType>>;
@@ -263,7 +264,6 @@ std::vector<bool> FindUndefinedDSColumns(const ColumnNames_t &requestedCols, con
 template <typename T>
 void DefineDSColumnHelper(std::string_view name, RLoopManager &lm, RDataSource &ds)
 {
-   //- TODO: qui ho messo lm get custom, perchè non so da dove andarle a prendere!
    auto readers = ds.GetColumnReaders<T>(name);
    auto getValue = [readers](unsigned int slot) { return *readers[slot]; };
    using NewCol_t = RCustomColumn<decltype(getValue), TCCHelperTypes::TSlot>;
@@ -400,7 +400,7 @@ void JitDefineHelper(F &&f, const ColumnNames_t &cols, std::string_view name, RL
    constexpr auto nColumns = ColTypes_t::list_size;
 
    auto ds = lm->GetDataSource();
-   //- TODO: This can't work, the new one must be used
+   //- TODO: JITTING
    if (ds)
       RDFInternal::DefineDataSourceColumns(cols, *lm, *ds, std::make_index_sequence<nColumns>(), ColTypes_t());
 
@@ -414,7 +414,7 @@ void CallBuildAndBook(PrevNodeType &prevNode, const ColumnNames_t &bl, const uns
                       const std::shared_ptr<RActionBase *> *actionPtrPtrOnHeap, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns)
 {
    // if we are here it means we are jitting, if we are jitting the loop manager must be alive
-   auto &loopManager = *prevNode.GetLoopManagerUnchecked();
+   /*auto &loopManager = *prevNode.GetLoopManagerUnchecked();
    using ColTypes_t = TypeList<BranchTypes...>;
    constexpr auto nColumns = ColTypes_t::list_size;
    auto ds = loopManager.GetDataSource();
@@ -425,7 +425,7 @@ void CallBuildAndBook(PrevNodeType &prevNode, const ColumnNames_t &bl, const uns
       BuildAndBook<BranchTypes...>(bl, *rOnHeap, nSlots, loopManager, prevNode, (ActionType *)nullptr, validCustomColumns, bookedCustomColumns);
    **actionPtrPtrOnHeap = actionPtr;
    delete rOnHeap;
-   delete actionPtrPtrOnHeap;
+   delete actionPtrPtrOnHeap;*/
 }
 
 /// The contained `type` alias is `double` if `T == TInferType`, `U` if `T == std::container<U>`, `T` otherwise.

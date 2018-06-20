@@ -1574,7 +1574,7 @@ private:
       auto lm = GetLoopManager();
       constexpr auto nColumns = sizeof...(BranchTypes);
       const auto selectedCols =
-         RDFInternal::GetValidatedColumnNames(*lm, nColumns, columns, fValidCustomColumns, fDataSource);
+         RDFInternal::GetValidatedColumnNames(*lm, nColumns, columns, *(fCustomColumns.fCustomColumnsNames), fDataSource);
 
       const auto nSlots = lm->GetNSlots();
       auto newColumns =
@@ -1582,10 +1582,9 @@ private:
             ? RDFInternal::AddDSColumns(selectedCols, fCustomColumns, *fDataSource,
                                         nSlots, std::make_index_sequence<nColumns>(), RDFInternal::TypeList<BranchTypes...>())
             : fCustomColumns;
-      //- HERE
-      /*auto actionPtr =
+      auto actionPtr =
          RDFInternal::BuildAndBook<BranchTypes...>(selectedCols, r, nSlots, *lm, *fProxiedPtr, (ActionType *)nullptr, newColumns);
-      return MakeResultPtr(r, lm, actionPtr);*/
+      return MakeResultPtr(r, lm, actionPtr);
    }
 
    // User did not specify type, do type inference
@@ -1596,17 +1595,18 @@ private:
    RResultPtr<ActionResultType>
    CreateAction(const ColumnNames_t &columns, const std::shared_ptr<ActionResultType> &r, const int nColumns = -1)
    {
-      auto lm = GetLoopManager();
+      //- TODO: This is JITTED stuff
+      /*auto lm = GetLoopManager();
       auto realNColumns = (nColumns > -1 ? nColumns : sizeof...(BranchTypes));
       const auto validColumnNames =
-         RDFInternal::GetValidatedColumnNames(*lm, realNColumns, columns, fValidCustomColumns, fDataSource);
+         RDFInternal::GetValidatedColumnNames(*lm, realNColumns, columns, *(fCustomColumns.fCustomColumnsNames), fDataSource);
       const unsigned int nSlots = lm->GetNSlots();
       const auto &customColumns = fValidCustomColumns;
       auto tree = lm->GetTree();
       auto rOnHeap = RDFInternal::MakeSharedOnHeap(r);
       auto upcastNode = RDFInternal::UpcastNode(fProxiedPtr);
       RInterface<TypeTraits::TakeFirstParameter_t<decltype(upcastNode)>> upcastInterface(
-         upcastNode, fImplWeakPtr, fValidCustomColumns, fDataSource);
+         upcastNode, fImplWeakPtr, fCustomColumns fDataSource);
       auto resultProxyAndActionPtrPtr = MakeResultPtr(r, lm);
       auto &resultProxy = resultProxyAndActionPtrPtr.first;
       auto actionPtrPtrOnHeap = RDFInternal::MakeSharedOnHeap(resultProxyAndActionPtrPtr.second);
@@ -1615,7 +1615,7 @@ private:
                                       typeid(std::shared_ptr<ActionResultType>), typeid(ActionType), rOnHeap, tree,
                                       nSlots, customColumns, fDataSource, actionPtrPtrOnHeap, lm->GetID());
       lm->ToJit(toJit);
-      return resultProxy;
+      return resultProxy;*/
    }
 
    template <typename F, typename CustomColumnType, typename RetType = typename TTraits::CallableTraits<F>::ret_type>
@@ -1700,9 +1700,9 @@ private:
 
       auto newColumns =
          fDataSource
-            ? RDFInternal::AddDSColumns(validCols, fBookedCustomColumns, fValidCustomColumns, *fDataSource,
+            ? RDFInternal::AddDSColumns(validCols, fCustomColumns, *fDataSource,
                                         lm->GetNSlots(), std::index_sequence_for<BranchTypes...>(), TTraits::TypeList<BranchTypes...>())
-            : std::make_pair(fBookedCustomColumns, fValidCustomColumns);
+            : fCustomColumns;
 
       const std::string fullTreename(treename);
       // split name into directory and treename if needed
@@ -1720,14 +1720,14 @@ private:
          using Helper_t = RDFInternal::SnapshotHelper<BranchTypes...>;
          using Action_t = RDFInternal::RAction<Helper_t, Proxied, TTraits::TypeList<BranchTypes...>>;
          actionPtr.reset(new Action_t(Helper_t(filename, dirname, treename, validCols, columnList, options), validCols,
-                                      *fProxiedPtr, newColumns.second, newColumns.first));
+                                      *fProxiedPtr, newColumns));
       } else {
          // multi-thread snapshot
          using Helper_t = RDFInternal::SnapshotHelperMT<BranchTypes...>;
          using Action_t = RDFInternal::RAction<Helper_t, Proxied>;
          actionPtr.reset(
             new Action_t(Helper_t(lm->GetNSlots(), filename, dirname, treename, validCols, columnList, options),
-                         validCols, *fProxiedPtr, newColumns.second, newColumns.first));
+                         validCols, *fProxiedPtr, newColumns));
       }
 
       lm->Book(actionPtr);
@@ -1768,14 +1768,10 @@ private:
       // in memory!
       RDFInternal::CheckSnapshot(sizeof...(BranchTypes), columnList.size());
 
-       auto newColumns =
-         fDataSource
-            ? RDFInternal::AddDSColumns(columnList, fBookedCustomColumns, fValidCustomColumns, *fDataSource,
-                                        GetLoopManager()->GetNSlots(), s, TTraits::TypeList<BranchTypes...>())
-            : std::make_pair(fBookedCustomColumns, fValidCustomColumns);
 
-            fBookedCustomColumns=newColumns.first;
-            fValidCustomColumns=newColumns.second;
+         if(fDataSource)
+            fCustomColumns = RDFInternal::AddDSColumns(columnList, fCustomColumns, *fDataSource,
+                                        GetLoopManager()->GetNSlots(), s, TTraits::TypeList<BranchTypes...>());
 
       auto colHolders = std::make_tuple(Take<BranchTypes>(columnList[S])...);
       auto ds = std::make_unique<RLazyDS<BranchTypes...>>(std::make_pair(columnList[S], std::get<S>(colHolders))...);
