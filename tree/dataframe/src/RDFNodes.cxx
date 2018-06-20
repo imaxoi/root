@@ -56,6 +56,7 @@ RActionBase::RActionBase(RLoopManager *implPtr, const unsigned int nSlots, Colum
 } // end NS Internal
 } // end NS ROOT
 
+//- TODO: Remove this old constructor
 RCustomColumnBase::RCustomColumnBase(std::string_view name, const unsigned int nSlots, const bool isDSColumn,
                                      ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns)
    : fName(name), fNSlots(nSlots), fIsDataSourceColumn(isDSColumn),
@@ -63,6 +64,13 @@ RCustomColumnBase::RCustomColumnBase(std::string_view name, const unsigned int n
      fBookedCustomColumns(bookedCustomColumns)
 {
 }
+
+RCustomColumnBase::RCustomColumnBase(std::string_view name, const unsigned int nSlots, const bool isDSColumn, RDFInternal::RBookedCustomColumns customColumns)
+   : fName(name), fNSlots(nSlots), fIsDataSourceColumn(isDSColumn),
+     fLastCheckedEntry(std::vector<Long64_t>(fNSlots, -1)), fCustomColumns(customColumns)
+{
+}
+
 
 // pin vtable. Work around cling JIT issue.
 RCustomColumnBase::~RCustomColumnBase() = default;

@@ -19,6 +19,7 @@
 #include "ROOT/RCutFlowReport.hxx"
 #include "ROOT/RDataSource.hxx"
 #include "ROOT/RDFNodesUtils.hxx"
+#include "ROOT/RDFBookedCustomColumns.hxx"
 #include "ROOT/RDFUtils.hxx"
 #include "ROOT/RVec.hxx"
 #include "ROOT/TSpinMutex.hxx"
@@ -226,13 +227,21 @@ protected:
    const bool fIsDataSourceColumn; ///< does the custom column refer to a data-source column? (or a user-define column?)
    std::vector<Long64_t> fLastCheckedEntry;
 
+   //- TODO remove these old things
    //- New pointer to the custom columns table
    ColumnNames_t fValidCustomColumns;
    RcustomColumnBasePtrMap_t fBookedCustomColumns;
+   //- end remove
+
+   RDFInternal::RBookedCustomColumns fCustomColumns;
 
 public:
+   //- TODO: Remove this old constructor
    RCustomColumnBase(std::string_view name, const unsigned int nSlots, const bool isDSColumn,
                      ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns);
+
+   RCustomColumnBase(std::string_view name, const unsigned int nSlots, const bool isDSColumn, RDFInternal::RBookedCustomColumns customColumns);
+
    RCustomColumnBase &operator=(const RCustomColumnBase &) = delete;
    virtual ~RCustomColumnBase(); // outlined defaulted.
    virtual void InitSlot(TTreeReader *r, unsigned int slot) = 0;
@@ -515,10 +524,19 @@ class RCustomColumn final : public RCustomColumnBase {
    bool fIsInitialized=false;
 
 public:
+   //- TODO: Remove this old constructor
    RCustomColumn(std::string_view name, F &&expression, const ColumnNames_t &bl, unsigned int nSlots,
                  ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns,
                  bool isDSColumn = false)
       : RCustomColumnBase(name, nSlots, isDSColumn, validCustomColumns, bookedCustomColumns),
+        fExpression(std::move(expression)), fBranches(bl), fLastResults(fNSlots), fValues(fNSlots)
+   {
+   }
+
+   RCustomColumn(std::string_view name, F &&expression, const ColumnNames_t &bl, unsigned int nSlots,
+                 RDFInternal::RBookedCustomColumns customColumns,
+                 bool isDSColumn = false)
+      : RCustomColumnBase(name, nSlots, isDSColumn, customColumns),
         fExpression(std::move(expression)), fBranches(bl), fLastResults(fNSlots), fValues(fNSlots)
    {
    }

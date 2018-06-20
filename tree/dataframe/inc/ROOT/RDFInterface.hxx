@@ -110,10 +110,12 @@ class RInterface {
 
    const std::shared_ptr<Proxied> fProxiedPtr;     ///< Smart pointer to the graph node encapsulated by this RInterface.
    const std::weak_ptr<RLoopManager> fImplWeakPtr; ///< Weak pointer to the RLoopManager at the root of the graph.
-   ColumnNames_t fValidCustomColumns; ///< Names of columns `Define`d for this branch of the functional graph.
+
    /// Non-owning pointer to a data-source object. Null if no data-source. RLoopManager has ownership of the object.
    RDataSource *const fDataSource = nullptr;
 
+   //- TODO: Remove these two
+   ColumnNames_t fValidCustomColumns; ///< Names of columns `Define`d for this branch of the functional graph.
    std::map<std::string, RCustomColumnBasePtr_t> fBookedCustomColumns;
 
    RDFInternal::RBookedCustomColumns fCustomColumns;
@@ -1620,7 +1622,7 @@ private:
    DefineImpl(std::string_view name, F &&expression, const ColumnNames_t &columns)
    {
       auto loopManager = GetLoopManager();
-      RDFInternal::CheckCustomColumn(name, loopManager->GetTree(), fValidCustomColumns,
+      RDFInternal::CheckCustomColumn(name, loopManager->GetTree(), *(fCustomColumns.fCustomColumnsNames),
                                      fDataSource ? fDataSource->GetColumnNames() : ColumnNames_t{});
 
       using ArgTypes_t = typename TTraits::CallableTraits<F>::arg_types;
@@ -1631,13 +1633,13 @@ private:
 
       constexpr auto nColumns = ColTypes_t::list_size;
       const auto validColumnNames =
-         RDFInternal::GetValidatedColumnNames(*loopManager, nColumns, columns, fValidCustomColumns, fDataSource);
+         RDFInternal::GetValidatedColumnNames(*loopManager, nColumns, columns, *(fCustomColumns.fCustomColumnsNames), fDataSource);
 
       auto newColumns =
          fDataSource
-            ? RDFInternal::AddDSColumns(validColumnNames, fBookedCustomColumns, fValidCustomColumns, *fDataSource,
+            ? RDFInternal::AddDSColumns(validColumnNames, fCustomColumns, *fDataSource,
                                         loopManager->GetNSlots(), std::make_index_sequence<nColumns>(), ColTypes_t())
-            : std::make_pair(fBookedCustomColumns, fValidCustomColumns);
+            : fCustomColumns;
 
       using NewCol_t = RDFDetail::RCustomColumn<F, CustomColumnType>;
 
@@ -1652,18 +1654,12 @@ private:
                                       std::string(name) + "_type = " + retTypeName + "; }";
       gInterpreter->Declare(retTypeDeclaration.c_str());
 
-      auto newValidCustomColumns(newColumns.second);
-      std::map<std::string, RCustomColumnBasePtr_t> newBookedCustomColumns(newColumns.first);
-      newValidCustomColumns.emplace_back(name);
 
-      newBookedCustomColumns[std::string(name)] =
-         std::make_shared<NewCol_t>(name, std::move(expression), validColumnNames, loopManager->GetNSlots(),
-                                    newValidCustomColumns, newBookedCustomColumns);
+      newColumns.fCustomColumnsNames->emplace_back(name);
+      (*(newColumns.fCustomColumns))[std::string(name)] =
+         std::make_shared<NewCol_t>(name, std::move(expression), validColumnNames, loopManager->GetNSlots(), newColumns);
 
-      RInterface<Proxied> newInterface(fProxiedPtr, fImplWeakPtr, newValidCustomColumns, fDataSource);
-
-      newInterface.fBookedCustomColumns=newBookedCustomColumns;
-
+      RInterface<Proxied> newInterface(fProxiedPtr, fImplWeakPtr, newColumns, fDataSource);
       return newInterface;
    }
 
@@ -1798,9 +1794,15 @@ protected:
       return df;
    }
 
+   //- TODO:Remove this old constructor
    RInterface(const std::shared_ptr<Proxied> &proxied, const std::weak_ptr<RLoopManager> &impl,
               const ColumnNames_t &validColumns, RDataSource *ds)
       : fProxiedPtr(proxied), fImplWeakPtr(impl), fValidCustomColumns(validColumns), fDataSource(ds)
+   {
+   }
+
+   RInterface(const std::shared_ptr<Proxied> &proxied, const std::weak_ptr<RLoopManager> &impl, RDFInternal::RBookedCustomColumns columns, RDataSource *ds)
+      : fProxiedPtr(proxied), fImplWeakPtr(impl), fCustomColumns(columns), fDataSource(ds)
    {
    }
 
