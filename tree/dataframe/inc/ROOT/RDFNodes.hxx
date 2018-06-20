@@ -390,12 +390,18 @@ protected:
                                /// event loop.
    const unsigned int fNSlots; ///< Number of thread slots used by this node.
 
-   //- New pointer to the custom columns table
+   //- TODO: Remove these old two
    ColumnNames_t fValidCustomColumns;
    RcustomColumnBasePtrMap_t fBookedCustomColumns;
 
+   RDFInternal::RBookedCustomColumns fCustomColumns;
+
 public:
+   //- TODO: Remove this old constructor
    RActionBase(RLoopManager *implPtr, const unsigned int nSlots, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns);
+
+   RActionBase(RLoopManager *implPtr, const unsigned int nSlots, RDFInternal::RBookedCustomColumns customColumns);
+
    RActionBase(const RActionBase &) = delete;
    RActionBase &operator=(const RActionBase &) = delete;
    virtual ~RActionBase() = default;
@@ -422,8 +428,15 @@ class RAction final : public RActionBase {
    std::vector<RDFValueTuple_t<ColumnTypes_t>> fValues;
 
 public:
+   //- TODO: Remove this old constructor
    RAction(Helper &&h, const ColumnNames_t &bl, PrevDataFrame &pd, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns)
       : RActionBase(pd.GetLoopManagerUnchecked(), pd.GetLoopManagerUnchecked()->GetNSlots(), validCustomColumns, bookedCustomColumns), fHelper(std::move(h)),
+        fBranches(bl), fPrevData(pd), fValues(fNSlots)
+   {
+   }
+
+   RAction(Helper &&h, const ColumnNames_t &bl, PrevDataFrame &pd, RDFInternal::RBookedCustomColumns customColumns)
+      : RActionBase(pd.GetLoopManagerUnchecked(), pd.GetLoopManagerUnchecked()->GetNSlots(), customColumns), fHelper(std::move(h)),
         fBranches(bl), fPrevData(pd), fValues(fNSlots)
    {
    }
@@ -803,15 +816,22 @@ protected:
    bool fHasStopped{false};         ///< True if the end of the range has been reached
    const unsigned int fNSlots;      ///< Number of thread slots used by this node, inherited from parent node.
 
-   //- New pointer to the custom columns table
+   //- TODO: Remove these
    ColumnNames_t fValidCustomColumns;
    RcustomColumnBasePtrMap_t fBookedCustomColumns;
+
+   RDFInternal::RBookedCustomColumns fCustomColumns;
 
    void ResetCounters();
 
 public:
+   //- TODO: Remove this old constructor
    RRangeBase(RLoopManager *implPtr, unsigned int start, unsigned int stop, unsigned int stride,
               const unsigned int nSlots, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns);
+
+   RRangeBase(RLoopManager *implPtr, unsigned int start, unsigned int stop, unsigned int stride,
+              const unsigned int nSlots, RDFInternal::RBookedCustomColumns customColumns);
+
    RRangeBase &operator=(const RRangeBase &) = delete;
    virtual ~RRangeBase() = default;
 
@@ -836,8 +856,15 @@ class RRange final : public RRangeBase {
    PrevData &fPrevData;
 
 public:
+   //- TODO: Remove this old constructor
    RRange(unsigned int start, unsigned int stop, unsigned int stride, PrevData &pd, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns)
       : RRangeBase(pd.GetLoopManagerUnchecked(), start, stop, stride, pd.GetLoopManagerUnchecked()->GetNSlots(), validCustomColumns, bookedCustomColumns),
+        fPrevData(pd)
+   {
+   }
+
+   RRange(unsigned int start, unsigned int stop, unsigned int stride, PrevData &pd, RDFInternal::RBookedCustomColumns customColumns)
+      : RRangeBase(pd.GetLoopManagerUnchecked(), start, stop, stride, pd.GetLoopManagerUnchecked()->GetNSlots(), customColumns),
         fPrevData(pd)
    {
    }

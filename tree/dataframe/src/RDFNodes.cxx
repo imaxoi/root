@@ -48,7 +48,12 @@ namespace ROOT {
 namespace Internal {
 namespace RDF {
 
+//- TODO: Remove this constructor
 RActionBase::RActionBase(RLoopManager *implPtr, const unsigned int nSlots, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns) : fLoopManager(implPtr), fNSlots(nSlots), fValidCustomColumns(validCustomColumns), fBookedCustomColumns(bookedCustomColumns)
+{
+}
+
+RActionBase::RActionBase(RLoopManager *implPtr, const unsigned int nSlots, RDFInternal::RBookedCustomColumns customColumns ) : fLoopManager(implPtr), fNSlots(nSlots), fCustomColumns(customColumns)
 {
 }
 
@@ -603,9 +608,16 @@ void RLoopManager::RegisterCallback(ULong64_t everyNEvents, std::function<void(u
       fCallbacks.emplace_back(everyNEvents, std::move(f), fNSlots);
 }
 
+//- TODO: Remove this old constructor
 RRangeBase::RRangeBase(RLoopManager *implPtr, unsigned int start, unsigned int stop, unsigned int stride,
                        const unsigned int nSlots, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns)
    : fLoopManager(implPtr), fStart(start), fStop(stop), fStride(stride), fNSlots(nSlots), fValidCustomColumns(validCustomColumns), fBookedCustomColumns(bookedCustomColumns)
+{
+}
+
+RRangeBase::RRangeBase(RLoopManager *implPtr, unsigned int start, unsigned int stop, unsigned int stride,
+                       const unsigned int nSlots, RDFInternal::RBookedCustomColumns customColumns)
+   : fLoopManager(implPtr), fStart(start), fStop(stop), fStride(stride), fNSlots(nSlots), fCustomColumns(customColumns)
 {
 }
 
