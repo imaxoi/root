@@ -262,37 +262,6 @@ ColumnNames_t GetValidatedColumnNames(RLoopManager &lm, const unsigned int nColu
 
 std::vector<bool> FindUndefinedDSColumns(const ColumnNames_t &requestedCols, const ColumnNames_t &definedDSCols);
 
-// TODO: Delete this
-/// Helper function to be used by `DefineDataSourceColumns`
-template <typename T>
-void DefineDSColumnHelper(std::string_view name, RLoopManager &lm, RDataSource &ds)
-{
-   auto readers = ds.GetColumnReaders<T>(name);
-   auto getValue = [readers](unsigned int slot) { return *readers[slot]; };
-   using NewCol_t = RCustomColumn<decltype(getValue), TCCHelperTypes::TSlot>;
-   lm.Book(std::make_shared<NewCol_t>(name, std::move(getValue), ColumnNames_t{}, lm.GetNSlots(),
-                                      lm.GetCustomColumnNames(), lm.GetBookedColumns(), /*isDSColumn=*/true));
-   lm.AddCustomColumnName(name);
-   lm.AddDataSourceColumn(name);
-}
-
-/// Take a list of data-source column names and define the ones that haven't been defined yet.
-// TODO delete this, should be unused
-template <typename... ColumnTypes, std::size_t... S>
-void DefineDataSourceColumns(const std::vector<std::string> &columns, RLoopManager &lm, RDataSource &ds,
-                             std::index_sequence<S...>, TTraits::TypeList<ColumnTypes...>)
-{
-   const auto mustBeDefined = FindUndefinedDSColumns(columns, lm.GetCustomColumnNames());
-   if (std::none_of(mustBeDefined.begin(), mustBeDefined.end(), [](bool b) { return b; })) {
-      // no need to define any column
-      return;
-   } else {
-      // hack to expand a template parameter pack without c++17 fold expressions.
-      std::initializer_list<int> expander{
-         (mustBeDefined[S] ? DefineDSColumnHelper<ColumnTypes>(columns[S], lm, ds) : /*no-op*/ ((void)0), 0)...};
-      (void)expander; // avoid unused variable warnings
-   }
-}
 using RCustomColumnBasePtrMap_t = std::map<std::string, std::shared_ptr<RCustomColumnBase>>;
 using ColumnNames_t = ROOT::Detail::RDF::ColumnNames_t;
 
@@ -343,8 +312,10 @@ template <typename F, typename PrevNode>
 void JitFilterHelper(F &&f, const ColumnNames_t &cols, std::string_view name, RJittedFilter *jittedFilter,
                      PrevNode *prevNode)
 {
+   std::cout <<"JITTED"<<std::endl;
+   //- TODO: JITTED
    // mock Filter logic -- validity checks and Define-ition of RDataSource columns
-   using F_t = RFilter<F, PrevNode>;
+   /*using F_t = RFilter<F, PrevNode>;
    using ColTypes_t = typename TTraits::CallableTraits<F>::arg_types;
    constexpr auto nColumns = ColTypes_t::list_size;
    RDFInternal::CheckFilter(f);
@@ -354,7 +325,7 @@ void JitFilterHelper(F &&f, const ColumnNames_t &cols, std::string_view name, RJ
    if (ds)
       RDFInternal::DefineDataSourceColumns(cols, lm, *ds, std::make_index_sequence<nColumns>(), ColTypes_t());
 
-   jittedFilter->SetFilter(std::make_unique<F_t>(std::move(f), cols, *prevNode, name));
+   jittedFilter->SetFilter(std::make_unique<F_t>(std::move(f), cols, *prevNode, name));*/
 }
 
 template <typename F>
@@ -367,8 +338,8 @@ void JitDefineHelper(F &&f, const ColumnNames_t &cols, std::string_view name, RL
 
    auto ds = lm->GetDataSource();
    //- TODO: JITTING
-   if (ds)
-      RDFInternal::DefineDataSourceColumns(cols, *lm, *ds, std::make_index_sequence<nColumns>(), ColTypes_t());
+   /*if (ds)
+      RDFInternal::DefineDataSourceColumns(cols, *lm, *ds, std::make_index_sequence<nColumns>(), ColTypes_t());*/
 
    lm->Book(std::make_shared<NewCol_t>(name, std::move(f), cols, lm));
 }
