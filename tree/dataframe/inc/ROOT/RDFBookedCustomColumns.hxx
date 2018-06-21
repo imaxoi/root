@@ -12,7 +12,10 @@
 #define ROOT_RDFBOOKEDCUSTOMCOLUMNS
 
 #include "ROOT/RDFNodes.hxx"
+#include "ROOT/RDFUtils.hxx"
 #include <vector>
+#include <memory>
+#include <map>
 
 namespace ROOT {
 namespace Internal {

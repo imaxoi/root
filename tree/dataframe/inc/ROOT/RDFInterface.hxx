@@ -223,6 +223,7 @@ public:
    /// Refer to the first overload of this method for the full documentation.
    RInterface<RDFDetail::RJittedFilter, DS_t> Filter(std::string_view expression, std::string_view name = "")
    {
+      std::cout <<"JITTING"<<std::endl;
       //- TODO: It's JITTING
       /*auto df = GetLoopManager();
       const auto &aliasMap = df->GetAliasMap();
@@ -340,6 +341,7 @@ public:
    /// Refer to the first overload of this method for the full documentation.
    RInterface<Proxied, DS_t> Define(std::string_view name, std::string_view expression)
    {
+      std::cout <<"JITTING"<<std::endl;
       //- TODO: It's JITTED
       /*
       auto lm = GetLoopManager();
@@ -1592,6 +1594,7 @@ private:
    RResultPtr<ActionResultType>
    CreateAction(const ColumnNames_t &columns, const std::shared_ptr<ActionResultType> &r, const int nColumns = -1)
    {
+      std::cout <<"JITTING"<<std::endl;
       //- TODO: This is JITTED stuff
       /*auto lm = GetLoopManager();
       auto realNColumns = (nColumns > -1 ? nColumns : sizeof...(BranchTypes));

@@ -290,47 +290,6 @@ void DefineDataSourceColumns(const std::vector<std::string> &columns, RLoopManag
       (void)expander; // avoid unused variable warnings
    }
 }
-//- TODO: Delete This old thing
-template <typename T>
-void AddDSColumnsHelper(std::string_view name, const std::map<std::string, RCustomColumnBasePtr_t> &currentCustomCols,
-                        const std::vector<std::string> &currentCustomColNames,
-                        std::map<std::string, RCustomColumnBasePtr_t> &newCustomCols,
-                        std::vector<std::string> &newNames, RDataSource &ds, unsigned int nSlots)
-{
-   auto readers = ds.GetColumnReaders<T>(name);
-   auto getValue = [readers](unsigned int slot) { return *readers[slot]; };
-   using NewCol_t = RCustomColumn<decltype(getValue), TCCHelperTypes::TSlot>;
-   auto newCol = std::make_shared<NewCol_t>(name, std::move(getValue), ColumnNames_t{}, nSlots, currentCustomColNames,
-                                            currentCustomCols, /*isDSColumn=*/true);
-   newCustomCols.insert(std::make_pair(std::string(name), newCol));
-   newNames.emplace_back(name);
-}
-//- TODO: Delete This old thing
-template <typename... ColumnTypes, std::size_t... S>
-std::pair<std::map<std::string, RCustomColumnBasePtr_t>, std::vector<std::string>>
-AddDSColumns(const std::vector<std::string> &requiredCols,
-             const std::map<std::string, RCustomColumnBasePtr_t> &currentCustomCols,
-             const std::vector<std::string> &currentCustomColNames, RDataSource &ds, unsigned int nSlots,
-             std::index_sequence<S...>, TTraits::TypeList<ColumnTypes...>)
-{
-   const auto mustBeDefined = FindUndefinedDSColumns(requiredCols, currentCustomColNames);
-   if (std::none_of(mustBeDefined.begin(), mustBeDefined.end(), [](bool b) { return b; })) {
-      // no need to define any column
-      return std::make_pair(currentCustomCols, currentCustomColNames);
-   } else {
-      auto newCustomCols = currentCustomCols;
-      auto newNames = currentCustomColNames;
-      // hack to expand a template parameter pack without c++17 fold expressions.
-      int expander[] = {(mustBeDefined[S]
-                            ? AddDSColumnsHelper<ColumnTypes>(requiredCols[S], currentCustomCols, currentCustomColNames,
-                                                              newCustomCols, newNames, ds, nSlots)
-                            : /*no-op*/ ((void)0),
-                         0)...};
-      (void)expander; // avoid unused variable warnings
-      return std::make_pair(newCustomCols, newNames);
-   }
-}
-
 
 template <typename T>
 void AddDSColumnsHelper(std::string_view name,
@@ -395,6 +354,7 @@ void JitFilterHelper(F &&f, const ColumnNames_t &cols, std::string_view name, RJ
 template <typename F>
 void JitDefineHelper(F &&f, const ColumnNames_t &cols, std::string_view name, RLoopManager *lm)
 {
+   std::cout <<"JITTING"<<std::endl;
    using NewCol_t = RCustomColumn<F, TCCHelperTypes::TNothing>;
    using ColTypes_t = typename TTraits::CallableTraits<F>::arg_types;
    constexpr auto nColumns = ColTypes_t::list_size;

@@ -48,11 +48,6 @@ namespace ROOT {
 namespace Internal {
 namespace RDF {
 
-//- TODO: Remove this constructor
-RActionBase::RActionBase(RLoopManager *implPtr, const unsigned int nSlots, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns) : fLoopManager(implPtr), fNSlots(nSlots), fValidCustomColumns(validCustomColumns), fBookedCustomColumns(bookedCustomColumns)
-{
-}
-
 RActionBase::RActionBase(RLoopManager *implPtr, const unsigned int nSlots, RDFInternal::RBookedCustomColumns customColumns ) : fLoopManager(implPtr), fNSlots(nSlots), fCustomColumns(customColumns)
 {
 }
@@ -60,15 +55,6 @@ RActionBase::RActionBase(RLoopManager *implPtr, const unsigned int nSlots, RDFIn
 } // end NS RDF
 } // end NS Internal
 } // end NS ROOT
-
-//- TODO: Remove this old constructor
-RCustomColumnBase::RCustomColumnBase(std::string_view name, const unsigned int nSlots, const bool isDSColumn,
-                                     ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns)
-   : fName(name), fNSlots(nSlots), fIsDataSourceColumn(isDSColumn),
-     fLastCheckedEntry(std::vector<Long64_t>(fNSlots, -1)), fValidCustomColumns(validCustomColumns),
-     fBookedCustomColumns(bookedCustomColumns)
-{
-}
 
 RCustomColumnBase::RCustomColumnBase(std::string_view name, const unsigned int nSlots, const bool isDSColumn, RDFInternal::RBookedCustomColumns customColumns)
    : fName(name), fNSlots(nSlots), fIsDataSourceColumn(isDSColumn),
@@ -86,12 +72,6 @@ std::string RCustomColumnBase::GetName() const
 }
 
 void RCustomColumnBase::InitNode()
-{
-}
-
-//- TODO: Remove this old constructor
-RFilterBase::RFilterBase(RLoopManager *implPtr, std::string_view name, const unsigned int nSlots, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns)
-   : fLoopManager(implPtr), fLastResult(nSlots), fAccepted(nSlots), fRejected(nSlots), fName(name), fNSlots(nSlots), fValidCustomColumns(validCustomColumns), fBookedCustomColumns(bookedCustomColumns)
 {
 }
 
@@ -417,8 +397,9 @@ void RLoopManager::InitNodeSlots(TTreeReader *r, unsigned int slot)
 {
    // booked branches must be initialized first because other nodes might need to point to the values they encapsulate
 
-   for (auto &bookedBranch : fBookedCustomColumns)
-      bookedBranch.second->InitSlot(r, slot);
+   //- TODO: This should not be needed anymore
+//    for (auto &bookedBranch : fBookedCustomColumns)
+//       bookedBranch.second->InitSlot(r, slot);
    for (auto &ptr : fBookedActions)
       ptr->InitSlot(r, slot);
    for (auto &ptr : fBookedFilters)
@@ -436,8 +417,9 @@ void RLoopManager::InitNodes()
    EvalChildrenCounts();
    for (auto &filter : fBookedFilters)
       filter->InitNode();
-   for (auto &customColumn : fBookedCustomColumns)
-      customColumn.second->InitNode();
+   //- TODO: This should not be needed anymore
+//    for (auto &customColumn : fBookedCustomColumns)
+//       customColumn.second->InitNode();
    for (auto &range : fBookedRanges)
       range->InitNode();
    for (auto &ptr : fBookedActions)
@@ -477,8 +459,9 @@ void RLoopManager::CleanUpTask(unsigned int slot)
       ptr->ClearValueReaders(slot);
    for (auto &ptr : fBookedFilters)
       ptr->ClearValueReaders(slot);
-   for (auto &pair : fBookedCustomColumns)
-      pair.second->ClearValueReaders(slot);
+   //- TODO: Ask about this. I should move the cleanup somewhere else.
+//    for (auto &pair : fBookedCustomColumns)
+//       pair.second->ClearValueReaders(slot);
 }
 
 /// Jit all actions that required runtime column type inference, and clean the `fToJit` member variable.
@@ -606,13 +589,6 @@ void RLoopManager::RegisterCallback(ULong64_t everyNEvents, std::function<void(u
       fCallbacksOnce.emplace_back(std::move(f), fNSlots);
    else
       fCallbacks.emplace_back(everyNEvents, std::move(f), fNSlots);
-}
-
-//- TODO: Remove this old constructor
-RRangeBase::RRangeBase(RLoopManager *implPtr, unsigned int start, unsigned int stop, unsigned int stride,
-                       const unsigned int nSlots, ColumnNames_t validCustomColumns, RcustomColumnBasePtrMap_t bookedCustomColumns)
-   : fLoopManager(implPtr), fStart(start), fStop(stop), fStride(stride), fNSlots(nSlots), fValidCustomColumns(validCustomColumns), fBookedCustomColumns(bookedCustomColumns)
-{
 }
 
 RRangeBase::RRangeBase(RLoopManager *implPtr, unsigned int start, unsigned int stop, unsigned int stride,
