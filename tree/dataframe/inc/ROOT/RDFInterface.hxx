@@ -113,6 +113,7 @@ class RInterface {
 
    /// Non-owning pointer to a data-source object. Null if no data-source. RLoopManager has ownership of the object.
    RDataSource *const fDataSource = nullptr;
+   std::shared_ptr<const ColumnNames_t> fBranchNames; ///< Cache of the chain columns names
 
    /// Contains the custom columns defined up to this node.
    RDFInternal::RBookedCustomColumns fCustomColumns;
@@ -166,6 +167,7 @@ public:
       auto loopManager = GetLoopManager();
       using ColTypes_t = typename TTraits::CallableTraits<F>::arg_types;
       constexpr auto nColumns = ColTypes_t::list_size;
+<<<<<<< HEAD
       const auto validColumnNames = RDFInternal::GetValidatedColumnNames(
          *loopManager, nColumns, columns, *(fCustomColumns.fCustomColumnsNames), fDataSource);
 
@@ -177,8 +179,10 @@ public:
       using F_t = RDFDetail::RFilter<F, Proxied>;
       auto FilterPtr = std::make_shared<F_t>(std::move(f), validColumnNames, *fProxiedPtr, newColumns, name);
       loopManager->Book(FilterPtr);
+
       RInterface<F_t, DS_t> newInterface(FilterPtr, fImplWeakPtr, newColumns, fDataSource);
       return newInterface;
+
    }
 
    ////////////////////////////////////////////////////////////////////////////
@@ -231,7 +235,7 @@ public:
 
       auto upcastNode = RDFInternal::UpcastNode(fProxiedPtr);
       RInterface<typename decltype(upcastNode)::element_type> upcastInterface(upcastNode, fImplWeakPtr,
-                                                                              fValidCustomColumns, fDataSource);
+                                                                              fValidCustomColumns, fBranchNames, fDataSource);
       const auto prevNodeTypeName = upcastInterface.GetNodeTypeName();
       const auto jittedFilter = std::make_shared<RDFDetail::RJittedFilter>(df.get(), name, fValidCustomColumns,
       fBookedCustomColumns); RDFInternal::BookFilterJit(jittedFilter.get(), upcastNode.get(), prevNodeTypeName, name,
@@ -348,7 +352,8 @@ public:
 
       RDFInternal::BookDefineJit(name, expression, *lm, fDataSource);
 
-      RInterface<Proxied, DS_t> newInterface(fProxiedPtr, fImplWeakPtr, fValidCustomColumns, fDataSource);
+      RInterface<Proxied, DS_t> newInterface(fProxiedPtr, fImplWeakPtr, fValidCustomColumns,
+                                             fBranchNames, fDataSource);
       newInterface.fValidCustomColumns.emplace_back(name);
       return newInterface;
       */
@@ -438,8 +443,8 @@ public:
       const auto nsID = df->GetID();
       std::stringstream snapCall;
       auto upcastNode = RDFInternal::UpcastNode(fProxiedPtr);
-      RInterface<TTraits::TakeFirstParameter_t<decltype(upcastNode)>> upcastInterface(fProxiedPtr, fImplWeakPtr,
-                                                                                      fCustomColumns, fDataSource);
+      RInterface<TTraits::TakeFirstParameter_t<decltype(upcastNode)>> upcastInterface(fProxiedPtr, fImplWeakPtr, fCustomColumns, fDataSource);
+
       // build a string equivalent to
       // "(RInterface<nodetype*>*)(this)->Snapshot<Ts...>(treename,filename,*(ColumnNames_t*)(&columnList), options)"
       // on Windows, to prefix the hexadecimal value of a pointer with '0x',
@@ -449,8 +454,10 @@ public:
 
       const auto &customCols = *(fCustomColumns.fCustomColumnsNames);
       const auto dontConvertVector = false;
+
       const auto validCols = RDFInternal::GetValidatedColumnNames(*df, columnList.size(), columnList,
                                                                   *(fCustomColumns.fCustomColumnsNames), fDataSource);
+
       for (auto &c : validCols) {
          const auto isCustom = std::find(customCols.begin(), customCols.end(), c) != customCols.end();
          snapCall << RDFInternal::ColumnName2ColumnTypeName(c, nsID, tree, fDataSource, isCustom, dontConvertVector)
@@ -552,7 +559,9 @@ public:
       std::stringstream snapCall;
       auto upcastNode = RDFInternal::UpcastNode(fProxiedPtr);
       RInterface<TTraits::TakeFirstParameter_t<decltype(upcastNode)>> upcastInterface(fProxiedPtr, fImplWeakPtr,
-                                                                                      fCustomColumns, fDataSource);
+                                                                                      fValidCustomColumns,
+                                                                                      fBranchNames,
+                                                                                      fDataSource);
       // build a string equivalent to
       // "(RInterface<nodetype*>*)(this)->Cache<Ts...>(*(ColumnNames_t*)(&columnList))"
       // on Windows, to prefix the hexadecimal value of a pointer with '0x',
@@ -613,7 +622,9 @@ public:
       using Range_t = RDFDetail::RRange<Proxied>;
       auto RangePtr = std::make_shared<Range_t>(begin, end, stride, *fProxiedPtr, fCustomColumns);
       df->Book(RangePtr);
+
       RInterface<RDFDetail::RRange<Proxied>> tdf_r(RangePtr, fImplWeakPtr, fCustomColumns, fDataSource);
+
       return tdf_r;
    }
 
@@ -669,12 +680,14 @@ public:
       auto loopManager = GetLoopManager();
       using ColTypes_t = TypeTraits::RemoveFirstParameter_t<typename TTraits::CallableTraits<F>::arg_types>;
       constexpr auto nColumns = ColTypes_t::list_size;
+
       const auto usedColumnNames = RDFInternal::GetValidatedColumnNames(
          *loopManager, nColumns, columns, *(fCustomColumns.fCustomColumnsNames), fDataSource);
       auto newColumns = fDataSource ? RDFInternal::AddDSColumns(usedColumnNames, fCustomColumns, *fDataSource,
                                                                 loopManager->GetNSlots(),
                                                                 std::make_index_sequence<nColumns>(), ColTypes_t())
                                     : fCustomColumns;
+
 
       using Helper_t = RDFInternal::ForeachSlotHelper<F>;
       using Action_t = RDFInternal::RAction<Helper_t, Proxied>;
@@ -764,6 +777,7 @@ public:
    {
       auto loopManager = GetLoopManager();
       const auto columns = column.empty() ? ColumnNames_t() : ColumnNames_t({std::string(column)});
+
       const auto selectedCols = RDFInternal::GetValidatedColumnNames(
          *loopManager, 1, columns, *(fCustomColumns.fCustomColumnsNames), fDataSource);
 
@@ -771,6 +785,7 @@ public:
          fDataSource ? RDFInternal::AddDSColumns(selectedCols, fCustomColumns, *fDataSource, loopManager->GetNSlots(),
                                                  std::make_index_sequence<1>(), TTraits::TypeList<T>())
                      : fCustomColumns;
+
 
       using Helper_t = RDFInternal::TakeHelper<T, T, COLL>;
       using Action_t = RDFInternal::RAction<Helper_t, Proxied>;
@@ -1395,6 +1410,7 @@ public:
       auto loopManager = GetLoopManager();
       const auto columns = columnName.empty() ? ColumnNames_t() : ColumnNames_t({std::string(columnName)});
       constexpr auto nColumns = ArgTypes::list_size;
+
       const auto selectedColumnsNames = RDFInternal::GetValidatedColumnNames(
          *loopManager, 1, columns, *(fCustomColumns.fCustomColumnsNames), fDataSource);
 
@@ -1473,6 +1489,8 @@ public:
    template <typename... ColumnTypes, typename Helper>
    RResultPtr<typename Helper::Result_t> Book(Helper &&h, const ColumnNames_t &columns = {})
    {
+      RDFInternal::CheckTypesAndPars(sizeof...(ColumnTypes), columns.size());
+
       // TODO add more static sanity checks on Helper
       using AH = RDFDetail::RActionImpl<Helper>;
       static_assert(std::is_base_of<AH, Helper>::value && std::is_convertible<Helper *, AH *>::value,
@@ -1494,6 +1512,7 @@ private:
       auto columnNames = std::make_shared<ColumnNames_t>();
 
       auto loopManager = GetLoopManager();
+
       ColumnNames_t validColNames = {};
 
       // Entry number column
@@ -1591,6 +1610,7 @@ private:
    {
       auto lm = GetLoopManager();
       constexpr auto nColumns = sizeof...(BranchTypes);
+
       const auto selectedCols = RDFInternal::GetValidatedColumnNames(
          *lm, nColumns, columns, *(fCustomColumns.fCustomColumnsNames), fDataSource);
 
@@ -1649,6 +1669,7 @@ private:
          std::is_same<CustomColumnType, RDFDetail::TCCHelperTypes::TSlotAndEntry>::value, ColTypesTmp_t>::type;
 
       constexpr auto nColumns = ColTypes_t::list_size;
+
       const auto validColumnNames = RDFInternal::GetValidatedColumnNames(
          *loopManager, nColumns, columns, *(fCustomColumns.fCustomColumnsNames), fDataSource);
 
@@ -1656,6 +1677,7 @@ private:
                                                                 loopManager->GetNSlots(),
                                                                 std::make_index_sequence<nColumns>(), ColTypes_t())
                                     : fCustomColumns;
+
 
       using NewCol_t = RDFDetail::RCustomColumn<F, CustomColumnType>;
 
@@ -1681,6 +1703,7 @@ private:
       RInterface<Proxied> newInterface(fProxiedPtr, fImplWeakPtr,
                                        RDFInternal::RBookedCustomColumns(std::move(newCols), std::move(newColsNames)),
                                        fDataSource);
+
       return newInterface;
    }
 
@@ -1708,7 +1731,7 @@ private:
    /// since there are no copies, the address of the value passed by reference
    /// is the address pointing to the storage of the read/created object in/by
    /// the TTreeReaderValue/TemporaryBranch
-   template <typename... BranchTypes>
+   template <typename... ColumnTypes>
    RResultPtr<RInterface<RLoopManager>> SnapshotImpl(std::string_view treename, std::string_view filename,
                                                      const ColumnNames_t &columnList, const RSnapshotOptions &options)
    {
@@ -1726,6 +1749,7 @@ private:
                                         std::index_sequence_for<BranchTypes...>(), TTraits::TypeList<BranchTypes...>())
             : fCustomColumns;
 
+
       const std::string fullTreename(treename);
       // split name into directory and treename if needed
       const auto lastSlash = treename.rfind('/');
@@ -1739,13 +1763,13 @@ private:
       std::shared_ptr<RDFInternal::RActionBase> actionPtr;
       if (!ROOT::IsImplicitMTEnabled()) {
          // single-thread snapshot
-         using Helper_t = RDFInternal::SnapshotHelper<BranchTypes...>;
-         using Action_t = RDFInternal::RAction<Helper_t, Proxied, TTraits::TypeList<BranchTypes...>>;
+         using Helper_t = RDFInternal::SnapshotHelper<ColumnTypes...>;
+         using Action_t = RDFInternal::RAction<Helper_t, Proxied, TTraits::TypeList<ColumnTypes...>>;
          actionPtr.reset(new Action_t(Helper_t(filename, dirname, treename, validCols, columnList, options), validCols,
                                       *fProxiedPtr, newColumns));
       } else {
          // multi-thread snapshot
-         using Helper_t = RDFInternal::SnapshotHelperMT<BranchTypes...>;
+         using Helper_t = RDFInternal::SnapshotHelperMT<ColumnTypes...>;
          using Action_t = RDFInternal::RAction<Helper_t, Proxied>;
          actionPtr.reset(
             new Action_t(Helper_t(lm->GetNSlots(), filename, dirname, treename, validCols, columnList, options),
@@ -1819,12 +1843,28 @@ protected:
    }
 
    RInterface(const std::shared_ptr<Proxied> &proxied, const std::weak_ptr<RLoopManager> &impl,
+
               RDFInternal::RBookedCustomColumns columns, RDataSource *ds)
       : fProxiedPtr(proxied), fImplWeakPtr(impl), fCustomColumns(columns), fDataSource(ds)
    {
    }
 
    const std::shared_ptr<Proxied> &GetProxiedPtr() const { return fProxiedPtr; }
+
+   /// Prepare the call to the GetValidatedColumnNames routine, making sure that GetBranchNames,
+   /// which is expensive in terms of runtime, is called at most once.
+   ColumnNames_t GetValidatedColumnNames(const unsigned int nColumns, const ColumnNames_t &columns)
+   {
+      auto loopManager = GetLoopManager();
+      auto tree = loopManager->GetTree();
+      if (tree && !fBranchNames) {
+         fBranchNames = std::make_shared<ColumnNames_t>(RDFInternal::GetBranchNames(*tree));
+      }
+      return RDFInternal::GetValidatedColumnNames(*loopManager, nColumns, columns,
+                                                  (tree ? *fBranchNames : ColumnNames_t{}),
+                                                  fValidCustomColumns, fDataSource);
+   }
+
 };
 
 template <>

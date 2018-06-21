@@ -5903,6 +5903,54 @@ bool TCling::LibraryLoadingFailed(const std::string& errmessage, const std::stri
    return false;
 }
 
+// This is a GNU implementation of hash used in bloom filter!
+static uint32_t GNUHash(StringRef S) {
+   uint32_t H = 5381;
+   for (uint8_t C : S)
+      H = (H << 5) + H + C;
+   return H;
+}
+
+static StringRef GetGnuHashSection(llvm::object::ObjectFile *file) {
+   for (auto S : file->sections()) {
+      StringRef name;
+      S.getName(name);
+      if (name == ".gnu.hash") {
+         StringRef content;
+         S.getContents(content);
+         return content;
+      }
+   }
+   return "";
+}
+
+// Bloom filter. See https://blogs.oracle.com/solaris/gnu-hash-elf-sections-v2
+// for detailed desctiption. In short, there is a .gnu.hash section in so files which contains
+// bloomfilter hash value that we can compare with our mangled_name hash. This is a false positive
+// probability data structure and enables us to skip libraries which doesn't contain mangled_name definition!
+// PE and Mach-O files doesn't have .gnu.hash bloomfilter section, so this is a specific optimization for ELF.
+// This is fine because performance critical part (data centers) are running on Linux :)
+static bool LookupBloomFilter(llvm::object::ObjectFile *soFile, uint32_t hash) {
+   const int bits = 64;
+
+   StringRef contents = GetGnuHashSection(soFile);
+   if (contents.size() < 16)
+      // We need to search if the library doesn't have .gnu.hash section!
+      return true;
+   const char* hashContent = contents.data();
+
+   // See https://flapenguin.me/2017/05/10/elf-lookup-dt-gnu-hash/ for .gnu.hash table layout.
+   uint32_t maskWords = *reinterpret_cast<const uint32_t *>(hashContent + 8);
+   uint32_t shift2 = *reinterpret_cast<const uint32_t *>(hashContent + 12);
+   uint32_t hash2 = hash >> shift2;
+   uint32_t n = (hash / bits) % maskWords;
+
+   const char *bloomfilter = hashContent + 16;
+   const char *hash_pos = bloomfilter + n*(bits/8); // * (Bits / 8)
+   uint64_t word = *reinterpret_cast<const uint64_t *>(hash_pos);
+   uint64_t bitmask = ( (1ULL << (hash % bits)) | (1ULL << (hash2 % bits)));
+   return  (bitmask & word) == bitmask;
+}
 
 static void* LazyFunctionCreatorAutoloadForModule(const std::string& mangled_name,
       cling::Interpreter *fInterpreter) {
@@ -5913,19 +5961,23 @@ static void* LazyFunctionCreatorAutoloadForModule(const std::string& mangled_nam
    R__LOCKGUARD(gInterpreterMutex);
 
    static bool sFirstRun = true;
-   // We don't want to do directory_iterator several times because it contains HDD access
-   static std::set<std::string> sLibraries;
+   // sLibraies contains pair of sPaths[i] (eg. /home/foo/module) and library name (eg. libTMVA.so). The
+   // reason why we're separating sLibraries and sPaths is that we have a lot of
+   // dupulication in path, for example we have "/home/foo/module-release/lib/libFoo.so", "/home/../libBar.so", "/home/../lib.."
+   // and it's waste of memory to store the full path.
+   static std::vector< std::pair<uint32_t, std::string> > sLibraries;
+   static std::vector<StringRef> sPaths;
 
    if (sFirstRun) {
       // Store the information of path so that we don't have to iterate over the same path again and again.
       std::unordered_set<std::string> alreadyLookedPath;
       const clang::Preprocessor &PP = fInterpreter->getCI()->getPreprocessor();
       const HeaderSearchOptions &HSOpts = PP.getHeaderSearchInfo().getHeaderSearchOpts();
-      const auto ModulePaths(HSOpts.PrebuiltModulePaths);
+      const std::vector<std::string>& ModulePaths(HSOpts.PrebuiltModulePaths);
       cling::DynamicLibraryManager* dyLibManager = fInterpreter->getDynamicLibraryManager();
 
       // Take path here eg. "/home/foo/module-release/lib/"
-      for (auto Path : ModulePaths) {
+      for (const std::string& Path : ModulePaths) {
          // Already searched?
          auto it = alreadyLookedPath.insert(Path);
          if (!it.second)
@@ -5936,6 +5988,8 @@ static void* LazyFunctionCreatorAutoloadForModule(const std::string& mangled_nam
          // to be autoloaded)
          if (!is_directory(DirPath) || Path == ".")
             continue;
+
+         sPaths.push_back(Path);
 
          std::error_code EC;
          for (llvm::sys::fs::directory_iterator DirIt(DirPath, EC), DirEnd;
@@ -5948,18 +6002,27 @@ static void* LazyFunctionCreatorAutoloadForModule(const std::string& mangled_nam
                // for symbols that cannot be found (neither by dlsym nor in the JIT).
                if (dyLibManager->isLibraryLoaded(FileName.c_str()))
                   continue;
-               sLibraries.insert(FileName);
+               sLibraries.push_back(std::make_pair(sPaths.size() - 1, llvm::sys::path::filename(FileName)));
             }
          }
       }
       sFirstRun = false;
    }
 
+   uint32_t hashedMangle = GNUHash(mangled_name);
    // Iterate over files under this path. We want to get each ".so" files
-   for (const std::string& LibName : sLibraries) {
+   for (std::pair<uint32_t, std::string> &P : sLibraries) {
+      llvm::SmallString<400> Vec(sPaths[P.first]);
+      llvm::sys::path::append(Vec, StringRef(P.second));
+      std::string LibName = Vec.str();
       auto SoFile = ObjectFile::createObjectFile(LibName);
       if (SoFile) {
          auto RealSoFile = SoFile.get().getBinary();
+
+         // Check Bloom filter. If false, it means that this library doesn't contain mangled_name defenition
+         if (!LookupBloomFilter(RealSoFile, hashedMangle))
+            continue;
+
          auto Symbols = RealSoFile->symbols();
          for (auto S : Symbols) {
             // DO NOT insert to table if symbol was weak or undefined
@@ -5971,11 +6034,13 @@ static void* LazyFunctionCreatorAutoloadForModule(const std::string& mangled_nam
                continue;
             }
 
-            if (S.getName().get() == mangled_name) {
+            if (SymNameErr.get() == mangled_name) {
                if (gSystem->Load(LibName.c_str(), "", false) < 0)
                   Error("LazyFunctionCreatorAutoloadForModule", "Failed to load library %s", LibName.c_str());
 
-               sLibraries.erase(LibName);
+               // We want to delete a loaded library from sLibraries cache, because sLibraries is
+               // a vector of candidate libraries which might be loaded in the future.
+               sLibraries.erase(std::remove(sLibraries.begin(), sLibraries.end(), P), sLibraries.end());
                void* addr = llvm::sys::DynamicLibrary::SearchForAddressOfSymbol(mangled_name.c_str());
                return addr;
             }

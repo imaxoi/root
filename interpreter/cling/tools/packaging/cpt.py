@@ -91,11 +91,11 @@ def exec_subprocess_check_output(cmd, cwd):
         return out
 
 def travis_fold_start(tag):
-    if TRAVIS_BUILD_DIR:
+    if os.environ.get('TRAVIS_BUILD_DIR', None):
        print('travis_fold:start:cpt-%s:' % (tag))
 
 def travis_fold_end(tag):
-   if TRAVIS_BUILD_DIR:
+   if os.environ.get('TRAVIS_BUILD_DIR', None):
       print('travis_fold:end:cpt-%s:' % (tag))
 
 def box_draw_header():
@@ -561,7 +561,7 @@ def compile(arg, build_libcpp):
                                   + ' -v ".I"', shell=True)
         except Exception as e:
             print(e)
-    travis_fold_start("compile")
+    travis_fold_end("compile")
 
 def install_prefix():
     travis_fold_start("install")

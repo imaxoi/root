@@ -389,10 +389,10 @@ public:
 
    virtual void Run(unsigned int slot, Long64_t entry) = 0;
    virtual void Initialize() = 0;
-   virtual void InitSlot(TTreeReader *r, unsigned int slot) = 0;
+   virtual void InitTask(TTreeReader *r, unsigned int slot) = 0;
    virtual void TriggerChildrenCount() = 0;
    virtual void ClearValueReaders(unsigned int slot) = 0;
-   virtual void ClearTask(unsigned int slot) = 0;
+   virtual void FinalizeSlot(unsigned int) = 0;
    /// This method is invoked to update a partial result during the event loop, right before passing the result to a
    /// user-defined callback registered via RResultPtr::RegisterCallback
    virtual void *PartialUpdate(unsigned int slot) = 0;
@@ -428,8 +428,7 @@ public:
          bookedBranch.second->InitSlot(r, slot);
 
       InitRDFValues(slot, fValues[slot], r, fBranches, fCustomColumns, TypeInd_t());
-
-      fHelper.InitSlot(r, slot);
+      fHelper.InitTask(r, slot);
    }
 
    void Run(unsigned int slot, Long64_t entry) final
@@ -448,16 +447,17 @@ public:
 
    void TriggerChildrenCount() final { fPrevData.IncrChildrenCount(); }
 
-   virtual void ClearValueReaders(unsigned int slot) final { ResetRDFValueTuple(fValues[slot], TypeInd_t()); }
-
-   virtual void ClearTask(unsigned int slot) final
+   void FinalizeSlot(unsigned int slot) final
    {
+      ClearValueReaders(slot);
       for (auto &column : *(fCustomColumns.fCustomColumns)) {
          column.second->ClearValueReaders(slot);
       }
-
-      ClearValueReaders(slot);
+      fHelper.CallFinalizeTask(slot);
    }
+
+   void ClearValueReaders(unsigned int slot) { ResetRDFValueTuple(fValues[slot], TypeInd_t()); }
+
 
    /// This method is invoked to update a partial result during the event loop, right before passing the result to a
    /// user-defined callback registered via RResultPtr::RegisterCallback

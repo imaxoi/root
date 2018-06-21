@@ -461,7 +461,7 @@ void RLoopManager::CleanUpNodes()
 void RLoopManager::CleanUpTask(unsigned int slot)
 {
    for (auto &ptr : fBookedActions)
-      ptr->ClearTask(slot);
+      ptr->FinalizeSlot(slot);
    for (auto &ptr : fBookedFilters)
       ptr->ClearTask(slot);
 }
