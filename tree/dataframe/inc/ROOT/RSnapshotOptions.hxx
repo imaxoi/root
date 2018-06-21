@@ -36,7 +36,7 @@ struct RSnapshotOptions {
    int fSplitLevel = 99;                      //< Split level of output tree
    bool fLazy = false;                        //< Delay the snapshot of the dataset
 };
-} // ns RDF
-} // ns ROOT
+} // namespace RDF
+} // namespace ROOT
 
 #endif

@@ -32,8 +32,8 @@ RDataFrame MakeLazyDataFrame(std::pair<std::string, RResultPtr<std::vector<Colum
    return tdf;
 }
 
-} // ns RDF
+} // namespace RDF
 
-} // ns ROOT
+} // namespace ROOT
 
 #endif

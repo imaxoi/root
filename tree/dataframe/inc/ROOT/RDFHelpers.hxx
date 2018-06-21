@@ -38,7 +38,6 @@ std::function<bool(ArgTypes...)> NotHelper(ROOT::TypeTraits::TypeList<ArgTypes..
 }
 } // namespace Internal
 
-
 namespace RDF {
 // clag-format off
 /// Given a callable with signature bool(T1, T2, ...) return a callable with same signature that returns the negated

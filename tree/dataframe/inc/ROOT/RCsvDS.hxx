@@ -41,7 +41,7 @@ private:
    std::vector<std::string> fHeaders;
    std::map<std::string, ColType_t> fColTypes;
    std::list<ColType_t> fColTypesList;
-   std::vector<std::vector<void *>> fColAddresses; // fColAddresses[column][slot]
+   std::vector<std::vector<void *>> fColAddresses;         // fColAddresses[column][slot]
    std::vector<Record_t> fRecords;                         // fRecords[entry][column]
    std::vector<std::vector<double>> fDoubleEvtValues;      // one per column per slot
    std::vector<std::vector<Long64_t>> fLong64EvtValues;    // one per column per slot
@@ -80,10 +80,11 @@ public:
 /// \param[in] readHeaders `true` if the CSV file contains headers as first row, `false` otherwise
 ///                        (default `true`).
 /// \param[in] delimiter Delimiter character (default ',').
-RDataFrame MakeCsvDataFrame(std::string_view fileName, bool readHeaders = true, char delimiter = ',', Long64_t linesChunkSize = -1LL);
+RDataFrame MakeCsvDataFrame(std::string_view fileName, bool readHeaders = true, char delimiter = ',',
+                            Long64_t linesChunkSize = -1LL);
 
-} // ns RDF
+} // namespace RDF
 
-} // ns ROOT
+} // namespace ROOT
 
 #endif

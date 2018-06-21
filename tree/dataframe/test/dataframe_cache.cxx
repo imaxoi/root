@@ -23,6 +23,8 @@ TEST(Cache, FundType)
    auto m = cached.Min<int>("c0");
    auto v = *cached.Take<int>("c0");
 
+   for(auto vi : v) std::cout <<"vi " << vi  <<std::endl;
+
    EXPECT_EQ(1, *m);
    EXPECT_EQ(5UL, *c);
    for (auto j : ROOT::TSeqI(5)) {

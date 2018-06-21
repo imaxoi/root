@@ -17,7 +17,6 @@ class TValueGetter;
 } // namespace RDF
 } // namespace Internal
 
-
 namespace RDF {
 
 class RArrowDS final : public RDataSource {
@@ -28,7 +27,8 @@ private:
    size_t fNSlots = 0U;
 
    std::vector<std::pair<size_t, size_t>> fGetterIndex; // (columnId, visitorId)
-   std::vector<std::unique_ptr<ROOT::Internal::RDF::TValueGetter>> fValueGetters; // Visitors to be used to track and get entries. One per column.
+   std::vector<std::unique_ptr<ROOT::Internal::RDF::TValueGetter>>
+      fValueGetters; // Visitors to be used to track and get entries. One per column.
    std::vector<void *> GetColumnReadersImpl(std::string_view name, const std::type_info &type) override;
 
 public:

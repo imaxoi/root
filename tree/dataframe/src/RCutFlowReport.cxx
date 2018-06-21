@@ -47,6 +47,6 @@ const TCutInfo &RCutFlowReport::operator[](std::string_view cutName)
    return *it;
 }
 
-} // End NS RDF
+} // namespace RDF
 
-} // End NS ROOT
+} // namespace ROOT

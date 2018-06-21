@@ -20,12 +20,11 @@
 
 namespace ROOT {
 
-
 namespace RDF {
 // Fwd decl for MakeResultPtr
 template <typename T>
 class RResultPtr;
-} // ns RDF
+} // namespace RDF
 
 namespace Detail {
 namespace RDF {
@@ -37,9 +36,8 @@ RResultPtr<T> MakeResultPtr(const std::shared_ptr<T> &r, const std::shared_ptr<R
 template <typename T>
 std::pair<RResultPtr<T>, std::shared_ptr<ROOT::Internal::RDF::RActionBase *>>
 MakeResultPtr(const std::shared_ptr<T> &r, const std::shared_ptr<RLoopManager> &df);
-} // ns RDF
-} // ns Detail
-
+} // namespace RDF
+} // namespace Detail
 
 namespace RDF {
 namespace RDFInternal = ROOT::Internal::RDF;
@@ -340,8 +338,7 @@ bool operator!=(std::nullptr_t lhs, const RResultPtr<T1> &rhs)
    return lhs != rhs.fObjPtr;
 }
 
-} // end NS RDF
-
+} // namespace RDF
 
 namespace Detail {
 namespace RDF {
@@ -368,8 +365,8 @@ MakeResultPtr(const std::shared_ptr<T> &r, const std::shared_ptr<RLoopManager> &
    df->Book(readiness);
    return std::make_pair(resPtr, resPtr.GetActionPtrPtr());
 }
-} // end NS RDF
-} // end NS Detail
-} // end NS ROOT
+} // namespace RDF
+} // namespace Detail
+} // namespace ROOT
 
 #endif // ROOT_TRESULTPROXY

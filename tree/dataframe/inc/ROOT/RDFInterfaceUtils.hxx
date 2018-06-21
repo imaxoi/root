@@ -17,6 +17,7 @@
 #include <ROOT/RDFActionHelpers.hxx> // for BuildAndBook
 #include <ROOT/RDFNodes.hxx>
 #include <ROOT/RDFUtils.hxx>
+#include <ROOT/RDFBookedCustomColumns.hxx>
 #include <ROOT/TypeTraits.hxx>
 #include <ROOT/TSeq.hxx>
 #include <algorithm>
@@ -114,14 +115,18 @@ struct HistoUtils<T, true> {
    static bool HasAxisLimits(T &) { return true; }
 };
 
+using RCustomColumnBasePtr_t = std::shared_ptr<RCustomColumnBase>;
+using RcustomColumnBasePtrMap_t = std::map<std::string, RCustomColumnBasePtr_t>;
+
 // Generic filling (covers Histo2D, Histo3D, Profile1D and Profile2D actions, with and without weights)
 template <typename... BranchTypes, typename ActionType, typename ActionResultType, typename PrevNodeType>
 RActionBase *BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<ActionResultType> &h,
-                          const unsigned int nSlots, RLoopManager &loopManager, PrevNodeType &prevNode, ActionType *)
+                          const unsigned int nSlots, RLoopManager &loopManager, PrevNodeType &prevNode, ActionType *,
+                          RDFInternal::RBookedCustomColumns customColumns)
 {
    using Helper_t = FillTOHelper<ActionResultType>;
    using Action_t = RAction<Helper_t, PrevNodeType, TTraits::TypeList<BranchTypes...>>;
-   auto action = std::make_shared<Action_t>(Helper_t(h, nSlots), bl, prevNode);
+   auto action = std::make_shared<Action_t>(Helper_t(h, nSlots), bl, prevNode, customColumns);
    loopManager.Book(action);
    return action.get();
 }
@@ -129,7 +134,8 @@ RActionBase *BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<ActionR
 // Histo1D filling (must handle the special case of distinguishing FillTOHelper and FillHelper
 template <typename... BranchTypes, typename PrevNodeType>
 RActionBase *BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<::TH1D> &h, const unsigned int nSlots,
-                          RLoopManager &loopManager, PrevNodeType &prevNode, ActionTypes::Histo1D *)
+                          RLoopManager &loopManager, PrevNodeType &prevNode, ActionTypes::Histo1D *,
+                          RDFInternal::RBookedCustomColumns customColumns)
 {
    auto hasAxisLimits = HistoUtils<::TH1D>::HasAxisLimits(*h);
 
@@ -137,13 +143,13 @@ RActionBase *BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<::TH1D>
    if (hasAxisLimits) {
       using Helper_t = FillTOHelper<::TH1D>;
       using Action_t = RAction<Helper_t, PrevNodeType, TTraits::TypeList<BranchTypes...>>;
-      auto action = std::make_shared<Action_t>(Helper_t(h, nSlots), bl, prevNode);
+      auto action = std::make_shared<Action_t>(Helper_t(h, nSlots), bl, prevNode, customColumns);
       loopManager.Book(action);
       actionBase = action.get();
    } else {
       using Helper_t = FillHelper;
       using Action_t = RAction<Helper_t, PrevNodeType, TTraits::TypeList<BranchTypes...>>;
-      auto action = std::make_shared<Action_t>(Helper_t(h, nSlots), bl, prevNode);
+      auto action = std::make_shared<Action_t>(Helper_t(h, nSlots), bl, prevNode, customColumns);
       loopManager.Book(action);
       actionBase = action.get();
    }
@@ -153,39 +159,39 @@ RActionBase *BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<::TH1D>
 
 // Min action
 template <typename BranchType, typename PrevNodeType, typename ActionResultType>
-RActionBase *
-BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<ActionResultType> &minV, const unsigned int nSlots,
-             RLoopManager &loopManager, PrevNodeType &prevNode, ActionTypes::Min *)
+RActionBase *BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<ActionResultType> &minV,
+                          const unsigned int nSlots, RLoopManager &loopManager, PrevNodeType &prevNode,
+                          ActionTypes::Min *, RDFInternal::RBookedCustomColumns customColumns)
 {
    using Helper_t = MinHelper<ActionResultType>;
    using Action_t = RAction<Helper_t, PrevNodeType, TTraits::TypeList<BranchType>>;
-   auto action = std::make_shared<Action_t>(Helper_t(minV, nSlots), bl, prevNode);
+   auto action = std::make_shared<Action_t>(Helper_t(minV, nSlots), bl, prevNode, customColumns);
    loopManager.Book(action);
    return action.get();
 }
 
 // Max action
 template <typename BranchType, typename PrevNodeType, typename ActionResultType>
-RActionBase *
-BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<ActionResultType> &maxV, const unsigned int nSlots,
-             RLoopManager &loopManager, PrevNodeType &prevNode, ActionTypes::Max *)
+RActionBase *BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<ActionResultType> &maxV,
+                          const unsigned int nSlots, RLoopManager &loopManager, PrevNodeType &prevNode,
+                          ActionTypes::Max *, RDFInternal::RBookedCustomColumns customColumns)
 {
    using Helper_t = MaxHelper<ActionResultType>;
    using Action_t = RAction<Helper_t, PrevNodeType, TTraits::TypeList<BranchType>>;
-   auto action = std::make_shared<Action_t>(Helper_t(maxV, nSlots), bl, prevNode);
+   auto action = std::make_shared<Action_t>(Helper_t(maxV, nSlots), bl, prevNode, customColumns);
    loopManager.Book(action);
    return action.get();
 }
 
 // Sum action
 template <typename BranchType, typename PrevNodeType, typename ActionResultType>
-RActionBase *
-BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<ActionResultType> &sumV, const unsigned int nSlots,
-             RLoopManager &loopManager, PrevNodeType &prevNode, ActionTypes::Sum *)
+RActionBase *BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<ActionResultType> &sumV,
+                          const unsigned int nSlots, RLoopManager &loopManager, PrevNodeType &prevNode,
+                          ActionTypes::Sum *, RDFInternal::RBookedCustomColumns customColumns)
 {
    using Helper_t = SumHelper<ActionResultType>;
    using Action_t = RAction<Helper_t, PrevNodeType, TTraits::TypeList<BranchType>>;
-   auto action = std::make_shared<Action_t>(Helper_t(sumV, nSlots), bl, prevNode);
+   auto action = std::make_shared<Action_t>(Helper_t(sumV, nSlots), bl, prevNode, customColumns);
    loopManager.Book(action);
    return action.get();
 }
@@ -193,11 +199,12 @@ BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<ActionResultType> &s
 // Mean action
 template <typename BranchType, typename PrevNodeType>
 RActionBase *BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<double> &meanV, const unsigned int nSlots,
-                          RLoopManager &loopManager, PrevNodeType &prevNode, ActionTypes::Mean *)
+                          RLoopManager &loopManager, PrevNodeType &prevNode, ActionTypes::Mean *,
+                          RDFInternal::RBookedCustomColumns customColumns)
 {
    using Helper_t = MeanHelper;
    using Action_t = RAction<Helper_t, PrevNodeType, TTraits::TypeList<BranchType>>;
-   auto action = std::make_shared<Action_t>(Helper_t(meanV, nSlots), bl, prevNode);
+   auto action = std::make_shared<Action_t>(Helper_t(meanV, nSlots), bl, prevNode, customColumns);
    loopManager.Book(action);
    return action.get();
 }
@@ -254,6 +261,7 @@ ColumnNames_t GetValidatedColumnNames(RLoopManager &lm, const unsigned int nColu
 
 std::vector<bool> FindUndefinedDSColumns(const ColumnNames_t &requestedCols, const ColumnNames_t &definedDSCols);
 
+// TODO: Delete this
 /// Helper function to be used by `DefineDataSourceColumns`
 template <typename T>
 void DefineDSColumnHelper(std::string_view name, RLoopManager &lm, RDataSource &ds)
@@ -261,12 +269,14 @@ void DefineDSColumnHelper(std::string_view name, RLoopManager &lm, RDataSource &
    auto readers = ds.GetColumnReaders<T>(name);
    auto getValue = [readers](unsigned int slot) { return *readers[slot]; };
    using NewCol_t = RCustomColumn<decltype(getValue), TCCHelperTypes::TSlot>;
-   lm.Book(std::make_shared<NewCol_t>(name, std::move(getValue), ColumnNames_t{}, &lm, /*isDSColumn=*/true));
+   lm.Book(std::make_shared<NewCol_t>(name, std::move(getValue), ColumnNames_t{}, lm.GetNSlots(),
+                                      lm.GetCustomColumnNames(), lm.GetBookedColumns(), /*isDSColumn=*/true));
    lm.AddCustomColumnName(name);
    lm.AddDataSourceColumn(name);
 }
 
 /// Take a list of data-source column names and define the ones that haven't been defined yet.
+// TODO delete this, should be unused
 template <typename... ColumnTypes, std::size_t... S>
 void DefineDataSourceColumns(const std::vector<std::string> &columns, RLoopManager &lm, RDataSource &ds,
                              std::index_sequence<S...>, TTraits::TypeList<ColumnTypes...>)
@@ -282,6 +292,50 @@ void DefineDataSourceColumns(const std::vector<std::string> &columns, RLoopManag
       (void)expander; // avoid unused variable warnings
    }
 }
+using RCustomColumnBasePtrMap_t = std::map<std::string, std::shared_ptr<RCustomColumnBase>>;
+using ColumnNames_t = ROOT::Detail::RDF::ColumnNames_t;
+
+template <typename T>
+void AddDSColumnsHelper(std::string_view name, const RDFInternal::RBookedCustomColumns &currentCols,
+                        std::shared_ptr<RCustomColumnBasePtrMap_t> &newCols,
+                        std::shared_ptr<ColumnNames_t> &newColsName, RDataSource &ds, unsigned int nSlots)
+{
+   auto readers = ds.GetColumnReaders<T>(name);
+   auto getValue = [readers](unsigned int slot) { return *readers[slot]; };
+   using NewCol_t = RCustomColumn<decltype(getValue), TCCHelperTypes::TSlot>;
+
+   auto newCol =
+      std::make_shared<NewCol_t>(name, std::move(getValue), ColumnNames_t{}, nSlots, currentCols, /*isDSColumn=*/true);
+   newCols->insert(std::make_pair(std::string(name), newCol));
+   newColsName->emplace_back(name);
+}
+
+// Take list of column names that must be defined, current map of custom columns, current list of defined column names,
+// and return a pair of new map of custom columns (with the new datasource columns added to it) and new list of defined
+// column names.
+template <typename... ColumnTypes, std::size_t... S>
+RDFInternal::RBookedCustomColumns
+AddDSColumns(const std::vector<std::string> &requiredCols, const RDFInternal::RBookedCustomColumns &currentCols,
+             RDataSource &ds, unsigned int nSlots, std::index_sequence<S...>, TTraits::TypeList<ColumnTypes...>)
+{
+
+   const auto mustBeDefined = FindUndefinedDSColumns(requiredCols, *(currentCols.fCustomColumnsNames));
+   if (std::none_of(mustBeDefined.begin(), mustBeDefined.end(), [](bool b) { return b; })) {
+      // no need to define any column
+      return currentCols;
+   } else {
+      auto newColumns = std::make_shared<RCustomColumnBasePtrMap_t>(*(currentCols.fCustomColumns));
+      auto newColumnsNames = std::make_shared<ColumnNames_t>(*(currentCols.fCustomColumnsNames));
+
+      // hack to expand a template parameter pack without c++17 fold expressions.
+      int expander[] = {(mustBeDefined[S] ? AddDSColumnsHelper<ColumnTypes>(requiredCols[S], currentCols, newColumns,
+                                                                            newColumnsNames, ds, nSlots)
+                                          : /*no-op*/ ((void)0),
+                         0)...};
+      (void)expander; // avoid unused variable warnings
+      return RDFInternal::RBookedCustomColumns(std::move(newColumns), std::move(newColumnsNames));
+   }
+}
 
 // this function is meant to be called by the jitted code generated by BookFilterJit
 template <typename F, typename PrevNode>
@@ -294,6 +348,7 @@ void JitFilterHelper(F &&f, const ColumnNames_t &cols, std::string_view name, RJ
    constexpr auto nColumns = ColTypes_t::list_size;
    RDFInternal::CheckFilter(f);
    auto &lm = *jittedFilter->GetLoopManagerUnchecked(); // RLoopManager must exist at this time
+   //- Todo this can't work, the new one has to be used
    auto ds = lm.GetDataSource();
    if (ds)
       RDFInternal::DefineDataSourceColumns(cols, lm, *ds, std::make_index_sequence<nColumns>(), ColTypes_t());
@@ -304,11 +359,13 @@ void JitFilterHelper(F &&f, const ColumnNames_t &cols, std::string_view name, RJ
 template <typename F>
 void JitDefineHelper(F &&f, const ColumnNames_t &cols, std::string_view name, RLoopManager *lm)
 {
+   std::cout << "JITTING" << std::endl;
    using NewCol_t = RCustomColumn<F, TCCHelperTypes::TNothing>;
    using ColTypes_t = typename TTraits::CallableTraits<F>::arg_types;
    constexpr auto nColumns = ColTypes_t::list_size;
 
    auto ds = lm->GetDataSource();
+   //- TODO: JITTING
    if (ds)
       RDFInternal::DefineDataSourceColumns(cols, *lm, *ds, std::make_index_sequence<nColumns>(), ColTypes_t());
 
@@ -319,20 +376,23 @@ void JitDefineHelper(F &&f, const ColumnNames_t &cols, std::string_view name, RL
 template <typename ActionType, typename... BranchTypes, typename PrevNodeType, typename ActionResultType>
 void CallBuildAndBook(PrevNodeType &prevNode, const ColumnNames_t &bl, const unsigned int nSlots,
                       const std::shared_ptr<ActionResultType> *rOnHeap,
-                      const std::shared_ptr<RActionBase *> *actionPtrPtrOnHeap)
+                      const std::shared_ptr<RActionBase *> *actionPtrPtrOnHeap, ColumnNames_t validCustomColumns,
+                      RcustomColumnBasePtrMap_t bookedCustomColumns)
 {
    // if we are here it means we are jitting, if we are jitting the loop manager must be alive
-   auto &loopManager = *prevNode.GetLoopManagerUnchecked();
+   /*auto &loopManager = *prevNode.GetLoopManagerUnchecked();
    using ColTypes_t = TypeList<BranchTypes...>;
    constexpr auto nColumns = ColTypes_t::list_size;
    auto ds = loopManager.GetDataSource();
    if (ds)
       DefineDataSourceColumns(bl, loopManager, *ds, std::make_index_sequence<nColumns>(), ColTypes_t());
+
    RActionBase *actionPtr =
-      BuildAndBook<BranchTypes...>(bl, *rOnHeap, nSlots, loopManager, prevNode, (ActionType *)nullptr);
+      BuildAndBook<BranchTypes...>(bl, *rOnHeap, nSlots, loopManager, prevNode, (ActionType *)nullptr,
+   validCustomColumns, bookedCustomColumns);
    **actionPtrPtrOnHeap = actionPtr;
    delete rOnHeap;
-   delete actionPtrPtrOnHeap;
+   delete actionPtrPtrOnHeap;*/
 }
 
 /// The contained `type` alias is `double` if `T == TInferType`, `U` if `T == std::container<U>`, `T` otherwise.

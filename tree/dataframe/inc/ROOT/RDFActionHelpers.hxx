@@ -84,9 +84,13 @@ public:
       fCallable(slot, std::forward<Args>(args)...);
    }
 
-   void Initialize() { /* noop */}
+   void Initialize()
+   { /* noop */
+   }
 
-   void Finalize() { /* noop */}
+   void Finalize()
+   { /* noop */
+   }
 };
 
 class CountHelper {
@@ -100,7 +104,9 @@ public:
    CountHelper(const CountHelper &) = delete;
    void InitSlot(TTreeReader *, unsigned int) {}
    void Exec(unsigned int slot);
-   void Initialize() { /* noop */}
+   void Initialize()
+   { /* noop */
+   }
    void Finalize();
    ULong64_t &PartialUpdate(unsigned int slot);
 };
@@ -123,7 +129,9 @@ public:
    ReportHelper(const ReportHelper &) = delete;
    void InitSlot(TTreeReader *, unsigned int) {}
    void Exec(unsigned int /* slot */) {}
-   void Initialize() { /* noop */}
+   void Initialize()
+   { /* noop */
+   }
    void Finalize()
    {
       // We need the weak_ptr in order to avoid crashes at tear down
@@ -186,7 +194,9 @@ public:
 
    Hist_t &PartialUpdate(unsigned int);
 
-   void Initialize() { /* noop */}
+   void Initialize()
+   { /* noop */
+   }
 
    void Finalize();
 };
@@ -304,7 +314,9 @@ public:
       }
    }
 
-   void Initialize() { /* noop */}
+   void Initialize()
+   { /* noop */
+   }
 
    void Finalize() { fTo->Merge(); }
 
@@ -338,7 +350,9 @@ public:
 
    void Exec(unsigned int slot, T &v) { fColls[slot]->emplace_back(v); }
 
-   void Initialize() { /* noop */}
+   void Initialize()
+   { /* noop */
+   }
 
    void Finalize()
    {
@@ -378,7 +392,9 @@ public:
 
    void Exec(unsigned int slot, T &v) { fColls[slot]->emplace_back(v); }
 
-   void Initialize() { /* noop */}
+   void Initialize()
+   { /* noop */
+   }
 
    // This is optimised to treat vectors
    void Finalize()
@@ -418,7 +434,9 @@ public:
 
    void Exec(unsigned int slot, RVec<RealT_t> av) { fColls[slot]->emplace_back(av.begin(), av.end()); }
 
-   void Initialize() { /* noop */}
+   void Initialize()
+   { /* noop */
+   }
 
    void Finalize()
    {
@@ -456,7 +474,9 @@ public:
 
    void Exec(unsigned int slot, RVec<RealT_t> av) { fColls[slot]->emplace_back(av.begin(), av.end()); }
 
-   void Initialize() { /* noop */}
+   void Initialize()
+   { /* noop */
+   }
 
    // This is optimised to treat vectors
    void Finalize()
@@ -496,7 +516,9 @@ public:
          fMins[slot] = std::min(v, fMins[slot]);
    }
 
-   void Initialize() { /* noop */}
+   void Initialize()
+   { /* noop */
+   }
 
    void Finalize()
    {
@@ -538,7 +560,9 @@ public:
          fMaxs[slot] = std::max((ResultType)v, fMaxs[slot]);
    }
 
-   void Initialize() { /* noop */}
+   void Initialize()
+   { /* noop */
+   }
 
    void Finalize()
    {
@@ -581,7 +605,9 @@ public:
          fSums[slot] += static_cast<ResultType>(v);
    }
 
-   void Initialize() { /* noop */}
+   void Initialize()
+   { /* noop */
+   }
 
    void Finalize()
    {
@@ -614,7 +640,9 @@ public:
       }
    }
 
-   void Initialize() { /* noop */}
+   void Initialize()
+   { /* noop */
+   }
 
    void Finalize();
 
@@ -637,7 +665,8 @@ void SetBranchesHelper(TTree * /*inputTree*/, TTree &outputTree, const std::stri
 
 /// Helper function for SnapshotHelper and SnapshotHelperMT. It creates new branches for the output TTree of a Snapshot.
 /// This overload is called for columns of type `RVec<T>`. For RDF, these can represent:
-/// 1. c-style arrays in ROOT files, so we are sure that there are input trees to which we can ask the correct branch title
+/// 1. c-style arrays in ROOT files, so we are sure that there are input trees to which we can ask the correct branch
+/// title
 /// 2. RVecs coming from a custom column or a source
 /// 3. vectors coming from ROOT files
 template <typename T>
@@ -877,7 +906,9 @@ public:
       fAggregate(fAggregators[slot], value);
    }
 
-   void Initialize() { /* noop */}
+   void Initialize()
+   { /* noop */
+   }
 
    template <typename MergeRet = typename CallableTraits<Merge>::ret_type,
              bool MergeAll = std::is_same<void, MergeRet>::value>
@@ -898,9 +929,9 @@ public:
    U &PartialUpdate(unsigned int slot) { return fAggregators[slot]; }
 };
 
-} // end of NS RDF
-} // end of NS Internal
-} // end of NS ROOT
+} // namespace RDF
+} // namespace Internal
+} // namespace ROOT
 
 /// \endcond
 
