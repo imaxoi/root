@@ -43,8 +43,8 @@ using ReaderValueOrArray_t = typename TReaderValueOrArray<T>::Proxy_t;
 /// TColumnValue. For temporary columns a pointer to the corresponding variable
 /// is passed instead.
 template <typename RDFValueTuple, std::size_t... S>
-void InitRDFValues(unsigned int slot, RDFValueTuple &valueTuple, TTreeReader *r, const ColumnNames_t &bn, const RBookedCustomColumns& customCols,
-                   std::index_sequence<S...>)
+void InitRDFValues(unsigned int slot, RDFValueTuple &valueTuple, TTreeReader *r, const ColumnNames_t &bn,
+                   const RBookedCustomColumns &customCols, std::index_sequence<S...>)
 {
    // isTmpBranch has length bn.size(). Elements are true if the corresponding
    // branch is a temporary branch created with Define, false if they are
@@ -52,13 +52,15 @@ void InitRDFValues(unsigned int slot, RDFValueTuple &valueTuple, TTreeReader *r,
    // TODO: evaluate this once, pass it down
    std::array<bool, sizeof...(S)> isTmpColumn;
    for (auto i = 0u; i < isTmpColumn.size(); ++i)
-      isTmpColumn[i] = std::find(customCols.fCustomColumnsNames->begin(), customCols.fCustomColumnsNames->end(), bn.at(i)) != customCols.fCustomColumnsNames->end();
+      isTmpColumn[i] = std::find(customCols.fCustomColumnsNames->begin(), customCols.fCustomColumnsNames->end(),
+                                 bn.at(i)) != customCols.fCustomColumnsNames->end();
 
    // hack to expand a parameter pack without c++17 fold expressions.
    // The statement defines a variable with type std::initializer_list<int>, containing all zeroes, and SetTmpColumn or
    // SetProxy are conditionally executed as the braced init list is expanded. The final ... expands S.
-   int expander[] = {(isTmpColumn[S] ? std::get<S>(valueTuple).SetTmpColumn(slot, customCols.fCustomColumns->at(bn.at(S)).get())
-                                     : std::get<S>(valueTuple).MakeProxy(r, bn.at(S)),
+   int expander[] = {(isTmpColumn[S]
+                         ? std::get<S>(valueTuple).SetTmpColumn(slot, customCols.fCustomColumns->at(bn.at(S)).get())
+                         : std::get<S>(valueTuple).MakeProxy(r, bn.at(S)),
                       0)...,
                      0};
    (void)expander; // avoid "unused variable" warnings for expander on gcc4.9

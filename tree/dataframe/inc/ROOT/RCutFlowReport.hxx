@@ -22,9 +22,8 @@ namespace ROOT {
 namespace Detail {
 namespace RDF {
 class RFilterBase;
-} // End NS RDF
-} // End NS Detail
-
+} // namespace RDF
+} // namespace Detail
 
 namespace RDF {
 
@@ -61,7 +60,7 @@ public:
    const_iterator end() const { return fCutInfos.end(); }
 };
 
-} // End NS RDF
-} // End NS ROOT
+} // namespace RDF
+} // namespace ROOT
 
 #endif

@@ -44,7 +44,6 @@ arrow::Schema.
 #pragma GCC diagnostic pop
 #endif
 
-
 namespace ROOT {
 namespace Internal {
 namespace RDF {
@@ -53,7 +52,7 @@ class ArrayPtrVisitor : public ::arrow::ArrayVisitor {
 private:
    /// The pointer to update.
    void **fResult;
-   bool fCachedBool{false};   // Booleans need to be unpacked, so we use a cached entry.
+   bool fCachedBool{false}; // Booleans need to be unpacked, so we use a cached entry.
    std::string fCachedString;
    /// The entry in the array which should be looked up.
    ULong64_t fCurrentEntry;
@@ -206,7 +205,6 @@ public:
 } // namespace RDF
 } // namespace Internal
 
-
 namespace RDF {
 
 /// Helper to get the contents of a given column
@@ -276,9 +274,6 @@ public:
    using ::arrow::TypeVisitor::Visit;
 };
 
-
-
-
 ////////////////////////////////////////////////////////////////////////
 /// Constructor to create an Arrow RDataSource for RDataFrame.
 /// \param[in] table the arrow Table to observe.
@@ -292,8 +287,7 @@ RArrowDS::RArrowDS(std::shared_ptr<arrow::Table> inTable, std::vector<std::strin
    auto &index = fGetterIndex;
    // We want to allow people to specify which columns they
    // need so that we can think of upfront IO optimizations.
-   auto filterWantedColumns = [&columnNames, &table]()
-   {
+   auto filterWantedColumns = [&columnNames, &table]() {
       if (columnNames.empty()) {
          for (auto &field : table->schema()->fields()) {
             columnNames.push_back(field->name());
@@ -301,8 +295,7 @@ RArrowDS::RArrowDS(std::shared_ptr<arrow::Table> inTable, std::vector<std::strin
       }
    };
 
-   auto getRecordsFirstColumn = [&columnNames, &table]()
-   {
+   auto getRecordsFirstColumn = [&columnNames, &table]() {
       if (columnNames.empty()) {
          throw std::runtime_error("At least one column required");
       }
@@ -312,8 +305,7 @@ RArrowDS::RArrowDS(std::shared_ptr<arrow::Table> inTable, std::vector<std::strin
    };
 
    // All columns are supposed to have the same number of entries.
-   auto verifyColumnSize = [](std::shared_ptr<arrow::Column> column, int nRecords)
-   {
+   auto verifyColumnSize = [](std::shared_ptr<arrow::Column> column, int nRecords) {
       if (column->length() != nRecords) {
          std::string msg = "Column ";
          msg += column->name() + " has a different number of entries.";
@@ -334,10 +326,7 @@ RArrowDS::RArrowDS(std::shared_ptr<arrow::Table> inTable, std::vector<std::strin
 
    /// This is used to create an index between the columnId
    /// and the associated getter.
-   auto addColumnToGetterIndex = [&index](int columnId)
-   {
-      index.push_back(std::make_pair(columnId, index.size()));
-   };
+   auto addColumnToGetterIndex = [&index](int columnId) { index.push_back(std::make_pair(columnId, index.size())); };
 
    /// Assuming we can get called more than once, we need to
    /// reset the getter index each time.
@@ -359,9 +348,7 @@ RArrowDS::RArrowDS(std::shared_ptr<arrow::Table> inTable, std::vector<std::strin
 
 ////////////////////////////////////////////////////////////////////////
 /// Destructor.
-RArrowDS::~RArrowDS()
-{
-}
+RArrowDS::~RArrowDS() {}
 
 const std::vector<std::string> &RArrowDS::GetColumnNames() const
 {
@@ -438,8 +425,7 @@ void RArrowDS::SetNSlots(unsigned int nSlots)
    }
 
    // We use the same logic as the ROOTDS.
-   auto splitInEqualRanges = [&outNSlots, &ranges](int nRecords, unsigned int newNSlots)
-   {
+   auto splitInEqualRanges = [&outNSlots, &ranges](int nRecords, unsigned int newNSlots) {
       ranges.clear();
       outNSlots = newNSlots;
       const auto chunkSize = nRecords / outNSlots;
@@ -455,8 +441,7 @@ void RArrowDS::SetNSlots(unsigned int nSlots)
       ranges.back().second += remainder;
    };
 
-   auto getNRecords = [&table, &columnNames]()->int
-   {
+   auto getNRecords = [&table, &columnNames]() -> int {
       auto index = table->schema()->GetFieldIndex(columnNames.front());
       return table->column(index)->length();
    };
@@ -470,8 +455,7 @@ void RArrowDS::SetNSlots(unsigned int nSlots)
 std::vector<void *> RArrowDS::GetColumnReadersImpl(std::string_view colName, const std::type_info &)
 {
    auto &index = fGetterIndex;
-   auto findGetterIndex = [&index](unsigned int column)
-   {
+   auto findGetterIndex = [&index](unsigned int column) {
       for (auto &entry : index) {
          if (entry.first == column) {
             return entry.second;
@@ -487,9 +471,7 @@ std::vector<void *> RArrowDS::GetColumnReadersImpl(std::string_view colName, con
    return fValueGetters[getterIdx]->SlotPtrs();
 }
 
-void RArrowDS::Initialise()
-{
-}
+void RArrowDS::Initialise() {}
 
 /// Creates a RDataFrame using an arrow::Table as input.
 /// \param[in] table the arrow Table to observe.

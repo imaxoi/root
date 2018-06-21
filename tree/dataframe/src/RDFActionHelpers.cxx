@@ -163,6 +163,6 @@ template void MeanHelper::Exec(unsigned int, const std::vector<char> &);
 template void MeanHelper::Exec(unsigned int, const std::vector<int> &);
 template void MeanHelper::Exec(unsigned int, const std::vector<unsigned int> &);
 
-} // end NS RDF
-} // end NS Internal
-} // end NS ROOT
+} // namespace RDF
+} // namespace Internal
+} // namespace ROOT

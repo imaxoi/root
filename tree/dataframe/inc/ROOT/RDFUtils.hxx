@@ -45,8 +45,8 @@ class RCustomColumnBase;
 struct TInferType {
 };
 
-} // end ns Detail
-} // end ns RDF
+} // namespace RDF
+} // namespace Detail
 
 namespace Internal {
 namespace RDF {
@@ -56,10 +56,12 @@ using namespace ROOT::RDF;
 
 /// Detect whether a type is an instantiation of vector<T,A>
 template <typename>
-struct IsVector_t : public std::false_type {};
+struct IsVector_t : public std::false_type {
+};
 
 template <typename T, typename A>
-struct IsVector_t<std::vector<T, A>> : public std::true_type {};
+struct IsVector_t<std::vector<T, A>> : public std::true_type {
+};
 
 const std::type_info &TypeName2TypeID(const std::string &name);
 
@@ -96,10 +98,12 @@ struct RemoveFirstTwoParametersIf<true, TypeList> {
 
 /// Detect whether a type is an instantiation of RVec<T>
 template <typename>
-struct IsRVec_t : public std::false_type {};
+struct IsRVec_t : public std::false_type {
+};
 
 template <typename T>
-struct IsRVec_t<ROOT::VecOps::RVec<T>> : public std::true_type {};
+struct IsRVec_t<ROOT::VecOps::RVec<T>> : public std::true_type {
+};
 
 // Check the value_type type of a type with a SFINAE to allow compilation in presence
 // fundamental types
@@ -120,9 +124,9 @@ struct ValueType<ROOT::VecOps::RVec<T>, false> {
 
 std::vector<std::string> ReplaceDotWithUnderscore(const std::vector<std::string> &columnNames);
 
-} // end NS RDF
-} // end NS Internal
-} // end NS ROOT
+} // namespace RDF
+} // namespace Internal
+} // namespace ROOT
 
 /// \endcond
 

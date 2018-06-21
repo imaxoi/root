@@ -198,8 +198,8 @@ public:
    }
 };
 
-} // ns RDF
+} // namespace RDF
 
-} // ns ROOT
+} // namespace ROOT
 
 #endif

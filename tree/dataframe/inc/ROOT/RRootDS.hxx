@@ -51,8 +51,8 @@ public:
 
 RDataFrame MakeRootDataFrame(std::string_view treeName, std::string_view fileNameGlob);
 
-} // ns RDF
+} // namespace RDF
 
-} // ns ROOT
+} // namespace ROOT
 
 #endif

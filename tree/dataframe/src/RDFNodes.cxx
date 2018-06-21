@@ -48,20 +48,22 @@ namespace ROOT {
 namespace Internal {
 namespace RDF {
 
-RActionBase::RActionBase(RLoopManager *implPtr, const unsigned int nSlots, RDFInternal::RBookedCustomColumns customColumns ) : fLoopManager(implPtr), fNSlots(nSlots), fCustomColumns(customColumns)
+RActionBase::RActionBase(RLoopManager *implPtr, const unsigned int nSlots,
+                         RDFInternal::RBookedCustomColumns customColumns)
+   : fLoopManager(implPtr), fNSlots(nSlots), fCustomColumns(customColumns)
 {
 }
 
-} // end NS RDF
-} // end NS Internal
-} // end NS ROOT
+} // namespace RDF
+} // namespace Internal
+} // namespace ROOT
 
-RCustomColumnBase::RCustomColumnBase(std::string_view name, const unsigned int nSlots, const bool isDSColumn, RDFInternal::RBookedCustomColumns customColumns)
+RCustomColumnBase::RCustomColumnBase(std::string_view name, const unsigned int nSlots, const bool isDSColumn,
+                                     RDFInternal::RBookedCustomColumns customColumns)
    : fName(name), fNSlots(nSlots), fIsDataSourceColumn(isDSColumn),
      fLastCheckedEntry(std::vector<Long64_t>(fNSlots, -1)), fCustomColumns(customColumns)
 {
 }
-
 
 // pin vtable. Work around cling JIT issue.
 RCustomColumnBase::~RCustomColumnBase() = default;
@@ -71,12 +73,12 @@ std::string RCustomColumnBase::GetName() const
    return fName;
 }
 
-void RCustomColumnBase::InitNode()
-{
-}
+void RCustomColumnBase::InitNode() {}
 
-RFilterBase::RFilterBase(RLoopManager *implPtr, std::string_view name, const unsigned int nSlots, RDFInternal::RBookedCustomColumns customColumns)
-   : fLoopManager(implPtr), fLastResult(nSlots), fAccepted(nSlots), fRejected(nSlots), fName(name), fNSlots(nSlots), fCustomColumns(customColumns)
+RFilterBase::RFilterBase(RLoopManager *implPtr, std::string_view name, const unsigned int nSlots,
+                         RDFInternal::RBookedCustomColumns customColumns)
+   : fLoopManager(implPtr), fLastResult(nSlots), fAccepted(nSlots), fRejected(nSlots), fName(name), fNSlots(nSlots),
+     fCustomColumns(customColumns)
 {
 }
 
@@ -180,9 +182,9 @@ void RJittedFilter::ClearValueReaders(unsigned int slot)
 void RJittedFilter::ClearTask(unsigned int slot)
 {
    R__ASSERT(fConcreteFilter != nullptr);
-   for (auto &column :*(fCustomColumns.fCustomColumns)){
-         column.second->ClearValueReaders(slot);
-      }
+   for (auto &column : *(fCustomColumns.fCustomColumns)) {
+      column.second->ClearValueReaders(slot);
+   }
    fConcreteFilter->ClearValueReaders(slot);
 }
 

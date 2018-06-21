@@ -21,26 +21,26 @@
 #include "TH3.h"
 
 /**
-* \class ROOT::RDF::TH1DModel
-* \ingroup dataframe
-* \brief A struct which stores the parameters of a TH1D
-*
-* \class ROOT::RDF::TH2DModel
-* \ingroup dataframe
-* \brief A struct which stores the parameters of a TH2D
-*
-* \class ROOT::RDF::TH3DModel
-* \ingroup dataframe
-* \brief A struct which stores the parameters of a TH3D
-*
-* \class ROOT::RDF::TProfile1DModel
-* \ingroup dataframe
-* \brief A struct which stores the parameters of a TProfile
-*
-* \class ROOT::RDF::TProfile2DModel
-* \ingroup dataframe
-* \brief A struct which stores the parameters of a TProfile2D
-*/
+ * \class ROOT::RDF::TH1DModel
+ * \ingroup dataframe
+ * \brief A struct which stores the parameters of a TH1D
+ *
+ * \class ROOT::RDF::TH2DModel
+ * \ingroup dataframe
+ * \brief A struct which stores the parameters of a TH2D
+ *
+ * \class ROOT::RDF::TH3DModel
+ * \ingroup dataframe
+ * \brief A struct which stores the parameters of a TH3D
+ *
+ * \class ROOT::RDF::TProfile1DModel
+ * \ingroup dataframe
+ * \brief A struct which stores the parameters of a TProfile
+ *
+ * \class ROOT::RDF::TProfile2DModel
+ * \ingroup dataframe
+ * \brief A struct which stores the parameters of a TProfile2D
+ */
 
 template <typename T>
 inline void FillVector(std::vector<double> &v, int size, T *a)
@@ -106,9 +106,7 @@ std::shared_ptr<::TH1D> TH1DModel::GetHistogram() const
    h->SetDirectory(nullptr); // object's lifetime is managed by the shared_ptr, detach it from ROOT's memory management
    return h;
 }
-TH1DModel::~TH1DModel()
-{
-}
+TH1DModel::~TH1DModel() {}
 
 TH2DModel::TH2DModel(const ::TH2D &h)
    : fName(h.GetName()), fTitle(h.GetTitle()), fNbinsX(h.GetNbinsX()), fNbinsY(h.GetNbinsY())
@@ -164,9 +162,7 @@ std::shared_ptr<::TH2D> TH2DModel::GetHistogram() const
    h->SetDirectory(nullptr); // object's lifetime is managed by the shared_ptr, detach it from ROOT's memory management
    return h;
 }
-TH2DModel::~TH2DModel()
-{
-}
+TH2DModel::~TH2DModel() {}
 
 TH3DModel::TH3DModel(const ::TH3D &h)
    : fName(h.GetName()), fTitle(h.GetTitle()), fNbinsX(h.GetNbinsX()), fNbinsY(h.GetNbinsY()), fNbinsZ(h.GetNbinsZ())
@@ -209,9 +205,7 @@ std::shared_ptr<::TH3D> TH3DModel::GetHistogram() const
    h->SetDirectory(nullptr);
    return h;
 }
-TH3DModel::~TH3DModel()
-{
-}
+TH3DModel::~TH3DModel() {}
 
 // Profiles
 
@@ -256,9 +250,7 @@ std::shared_ptr<::TProfile> TProfile1DModel::GetProfile() const
    prof->SetDirectory(nullptr); // lifetime is managed by the shared_ptr, detach from ROOT's memory management
    return prof;
 }
-TProfile1DModel::~TProfile1DModel()
-{
-}
+TProfile1DModel::~TProfile1DModel() {}
 
 TProfile2DModel::TProfile2DModel(const ::TProfile2D &h)
    : fName(h.GetName()), fTitle(h.GetTitle()), fNbinsX(h.GetNbinsX()), fXLow(h.GetXaxis()->GetXmin()),
@@ -310,10 +302,8 @@ std::shared_ptr<::TProfile2D> TProfile2DModel::GetProfile() const
    return prof;
 }
 
-TProfile2DModel::~TProfile2DModel()
-{
-}
+TProfile2DModel::~TProfile2DModel() {}
 
-} // ns RDF
+} // namespace RDF
 
-} // ns ROOT
+} // namespace ROOT

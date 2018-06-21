@@ -67,12 +67,12 @@ public:
    void ReturnSlot(unsigned int slotNumber);
    unsigned int GetSlot();
 };
-} // ns RDF
-} // ns Internal
+} // namespace RDF
+} // namespace Internal
 
 namespace Detail {
 namespace RDF {
-   class RCustomColumnBase;
+class RCustomColumnBase;
 
 using namespace ROOT::TypeTraits;
 namespace RDFInternal = ROOT::Internal::RDF;
@@ -219,6 +219,7 @@ public:
 class RCustomColumnBase {
    using RCustomColumnBasePtr_t = std::shared_ptr<RCustomColumnBase>;
    using RcustomColumnBasePtrMap_t = std::map<std::string, RCustomColumnBasePtr_t>;
+
 protected:
    const std::string fName;
    unsigned int fNChildren{0};      ///< number of nodes of the functional graph hanging from this object
@@ -230,7 +231,8 @@ protected:
    RDFInternal::RBookedCustomColumns fCustomColumns;
 
 public:
-   RCustomColumnBase(std::string_view name, const unsigned int nSlots, const bool isDSColumn, RDFInternal::RBookedCustomColumns customColumns);
+   RCustomColumnBase(std::string_view name, const unsigned int nSlots, const bool isDSColumn,
+                     RDFInternal::RBookedCustomColumns customColumns);
 
    RCustomColumnBase &operator=(const RCustomColumnBase &) = delete;
    virtual ~RCustomColumnBase(); // outlined defaulted.
@@ -245,9 +247,8 @@ public:
    void InitNode();
 };
 
-
-} // end ns RDF
-} // end ns Detail
+} // namespace RDF
+} // namespace Detail
 
 namespace Internal {
 namespace RDF {
@@ -302,7 +303,7 @@ class TColumnValue {
    /// Non-owning ptrs to the node responsible for the custom column. Needed when querying custom values.
    std::vector<RCustomColumnBase *> fCustomColumns;
    /// Enumerator for the different properties of the branch storage in memory
-   enum class EStorageType : char { kContiguous, kUnknown, kSparse};
+   enum class EStorageType : char { kContiguous, kUnknown, kSparse };
    /// Signal whether we ever checked that the branch we are reading with a TTreeReaderArray stores array elements
    /// in contiguous memory. Only used when T == RVec<U>.
    EStorageType fStorageType = EStorageType::kUnknown;
@@ -410,8 +411,8 @@ class RAction final : public RActionBase {
 
 public:
    RAction(Helper &&h, const ColumnNames_t &bl, PrevDataFrame &pd, RDFInternal::RBookedCustomColumns customColumns)
-      : RActionBase(pd.GetLoopManagerUnchecked(), pd.GetLoopManagerUnchecked()->GetNSlots(), customColumns), fHelper(std::move(h)),
-        fBranches(bl), fPrevData(pd), fValues(fNSlots)
+      : RActionBase(pd.GetLoopManagerUnchecked(), pd.GetLoopManagerUnchecked()->GetNSlots(), customColumns),
+        fHelper(std::move(h)), fBranches(bl), fPrevData(pd), fValues(fNSlots)
    {
    }
 
@@ -449,15 +450,14 @@ public:
 
    virtual void ClearValueReaders(unsigned int slot) final { ResetRDFValueTuple(fValues[slot], TypeInd_t()); }
 
-   virtual void ClearTask(unsigned int slot) final {
-      for (auto &column :*(fCustomColumns.fCustomColumns)){
+   virtual void ClearTask(unsigned int slot) final
+   {
+      for (auto &column : *(fCustomColumns.fCustomColumns)) {
          column.second->ClearValueReaders(slot);
       }
 
-     ClearValueReaders(slot);
-
+      ClearValueReaders(slot);
    }
-
 
    /// This method is invoked to update a partial result during the event loop, right before passing the result to a
    /// user-defined callback registered via RResultPtr::RegisterCallback
@@ -476,8 +476,8 @@ private:
    void *PartialUpdateImpl(...) { throw std::runtime_error("This action does not support callbacks yet!"); }
 };
 
-} // end NS RDF
-} // end NS Internal
+} // namespace RDF
+} // namespace Internal
 
 namespace Detail {
 namespace RDF {
@@ -518,15 +518,14 @@ class RCustomColumn final : public RCustomColumnBase {
    std::vector<RDFInternal::RDFValueTuple_t<ColumnTypes_t>> fValues;
 
    // The initialization and cleaning are called by the nodes that own this columns. There could be more than one.
-   bool fIsInitialized=false;
-   bool fIsCleaned=false;
+   bool fIsInitialized = false;
+   bool fIsCleaned = false;
 
 public:
    RCustomColumn(std::string_view name, F &&expression, const ColumnNames_t &bl, unsigned int nSlots,
-                 RDFInternal::RBookedCustomColumns customColumns,
-                 bool isDSColumn = false)
-      : RCustomColumnBase(name, nSlots, isDSColumn, customColumns),
-        fExpression(std::move(expression)), fBranches(bl), fLastResults(fNSlots), fValues(fNSlots)
+                 RDFInternal::RBookedCustomColumns customColumns, bool isDSColumn = false)
+      : RCustomColumnBase(name, nSlots, isDSColumn, customColumns), fExpression(std::move(expression)), fBranches(bl),
+        fLastResults(fNSlots), fValues(fNSlots)
    {
    }
 
@@ -535,10 +534,10 @@ public:
 
    void InitSlot(TTreeReader *r, unsigned int slot) final
    {
-      if(fIsInitialized)
+      if (fIsInitialized)
          return;
       RDFInternal::InitRDFValues(slot, fValues[slot], r, fBranches, fCustomColumns, TypeInd_t());
-      fIsInitialized=true;
+      fIsInitialized = true;
    }
 
    void *GetValuePtr(unsigned int slot) final { return static_cast<void *>(&fLastResults[slot]); }
@@ -587,18 +586,19 @@ public:
       (void)entry;
    }
 
-   void ClearValueReaders(unsigned int slot) final {
-      if(fIsCleaned)
+   void ClearValueReaders(unsigned int slot) final
+   {
+      if (fIsCleaned)
          return;
       RDFInternal::ResetRDFValueTuple(fValues[slot], TypeInd_t());
-      fIsCleaned=true;
+      fIsCleaned = true;
    }
-
 };
 
 class RFilterBase {
    using RCustomColumnBasePtr_t = std::shared_ptr<RCustomColumnBase>;
    using RcustomColumnBasePtrMap_t = std::map<std::string, RCustomColumnBasePtr_t>;
+
 protected:
    RLoopManager *fLoopManager; ///< A raw pointer to the RLoopManager at the root of this functional graph. It is only
                                /// guaranteed to contain a valid address during an event loop.
@@ -614,7 +614,8 @@ protected:
    RDFInternal::RBookedCustomColumns fCustomColumns;
 
 public:
-   RFilterBase(RLoopManager *df, std::string_view name, const unsigned int nSlots, RDFInternal::RBookedCustomColumns customColumns);
+   RFilterBase(RLoopManager *df, std::string_view name, const unsigned int nSlots,
+               RDFInternal::RBookedCustomColumns customColumns);
    RFilterBase &operator=(const RFilterBase &) = delete;
    virtual ~RFilterBase() = default;
 
@@ -654,7 +655,10 @@ class RJittedFilter final : public RFilterBase {
    std::unique_ptr<RFilterBase> fConcreteFilter = nullptr;
 
 public:
-   RJittedFilter(RLoopManager *lm, std::string_view name, RDFInternal::RBookedCustomColumns customColumns) : RFilterBase(lm, name, lm->GetNSlots(), customColumns) {}
+   RJittedFilter(RLoopManager *lm, std::string_view name, RDFInternal::RBookedCustomColumns customColumns)
+      : RFilterBase(lm, name, lm->GetNSlots(), customColumns)
+   {
+   }
 
    void SetFilter(std::unique_ptr<RFilterBase> f);
 
@@ -686,7 +690,8 @@ class RFilter final : public RFilterBase {
    std::vector<RDFInternal::RDFValueTuple_t<ColumnTypes_t>> fValues;
 
 public:
-   RFilter(FilterF &&f, const ColumnNames_t &bl, PrevDataFrame &pd, RDFInternal::RBookedCustomColumns customColumns, std::string_view name = "")
+   RFilter(FilterF &&f, const ColumnNames_t &bl, PrevDataFrame &pd, RDFInternal::RBookedCustomColumns customColumns,
+           std::string_view name = "")
       : RFilterBase(pd.GetLoopManagerUnchecked(), name, pd.GetLoopManagerUnchecked()->GetNSlots(), customColumns),
         fFilter(std::move(f)), fBranches(bl), fPrevData(pd), fValues(fNSlots)
    {
@@ -763,19 +768,20 @@ public:
       RDFInternal::ResetRDFValueTuple(fValues[slot], TypeInd_t());
    }
 
-   virtual void ClearTask(unsigned int slot) final {
-      for (auto &column :*(fCustomColumns.fCustomColumns)){
+   virtual void ClearTask(unsigned int slot) final
+   {
+      for (auto &column : *(fCustomColumns.fCustomColumns)) {
          column.second->ClearValueReaders(slot);
       }
 
-     ClearValueReaders(slot);
-
+      ClearValueReaders(slot);
    }
 };
 
 class RRangeBase {
    using RCustomColumnBasePtr_t = std::shared_ptr<RCustomColumnBase>;
    using RcustomColumnBasePtrMap_t = std::map<std::string, RCustomColumnBasePtr_t>;
+
 protected:
    RLoopManager *fLoopManager; ///< A raw pointer to the RLoopManager at the root of this functional graph. It is only
                                /// guaranteed to contain a valid address during an event loop.
@@ -822,8 +828,10 @@ class RRange final : public RRangeBase {
    PrevData &fPrevData;
 
 public:
-   RRange(unsigned int start, unsigned int stop, unsigned int stride, PrevData &pd, RDFInternal::RBookedCustomColumns customColumns)
-      : RRangeBase(pd.GetLoopManagerUnchecked(), start, stop, stride, pd.GetLoopManagerUnchecked()->GetNSlots(), customColumns),
+   RRange(unsigned int start, unsigned int stop, unsigned int stride, PrevData &pd,
+          RDFInternal::RBookedCustomColumns customColumns)
+      : RRangeBase(pd.GetLoopManagerUnchecked(), start, stop, stride, pd.GetLoopManagerUnchecked()->GetNSlots(),
+                   customColumns),
         fPrevData(pd)
    {
    }
@@ -958,8 +966,9 @@ T &TColumnValue<T, B>::Get(Long64_t entry)
 #ifndef NDEBUG
          if (!fCopyWarningPrinted) {
             Warning("TColumnValue::Get",
-                  "Branch %s hangs from a non-split branch. For this reason, it cannot be accessed via a RVec. A copy is being performed in order to properly read the content.",
-                  readerArray.GetBranchName());
+                    "Branch %s hangs from a non-split branch. For this reason, it cannot be accessed via a RVec. A "
+                    "copy is being performed in order to properly read the content.",
+                    readerArray.GetBranchName());
             fCopyWarningPrinted = true;
          }
 #else
