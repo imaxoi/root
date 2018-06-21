@@ -677,7 +677,22 @@ thread-safety, see [here](#generic-actions).
 <a name="reference"></a>
 */
 // clang-format on
+
 namespace ROOT {
+
+namespace Detail{
+namespace RDF{
+   class RCustomColumnBase;
+}
+}
+
+
+using RCustomColumnBasePtrMap_t = std::map<std::string, std::shared_ptr<ROOT::Detail::RDF::RCustomColumnBase>>;
+using RCustomColumnBasePtrMapPtr_t = std::shared_ptr<const RCustomColumnBasePtrMap_t>;
+using ColumnNames_t = ROOT::Detail::RDF::ColumnNames_t;
+using ColumnNamesPtr_t = std::shared_ptr<const ColumnNames_t>;
+
+namespace RDFInternal = ROOT::Internal::RDF;
 
 ////////////////////////////////////////////////////////////////////////////
 /// \brief Build the dataframe
@@ -690,7 +705,7 @@ namespace ROOT {
 /// See RInterface for the documentation of the
 /// methods available.
 RDataFrame::RDataFrame(std::string_view treeName, TDirectory *dirPtr, const ColumnNames_t &defaultBranches)
-   : RInterface<RDFDetail::RLoopManager>(std::make_shared<RDFDetail::RLoopManager>(nullptr, defaultBranches))
+   : RInterface<RDFDetail::RLoopManager>(std::make_shared<RDFDetail::RLoopManager>(nullptr, defaultBranches), RDFInternal::RBookedCustomColumns( std::make_shared<RCustomColumnBasePtrMap_t>(), std::make_shared<ColumnNames_t>()))
 {
    if (!dirPtr) {
       auto msg = "Invalid TDirectory!";
@@ -716,7 +731,7 @@ RDataFrame::RDataFrame(std::string_view treeName, TDirectory *dirPtr, const Colu
 /// See RInterface for the documentation of the
 /// methods available.
 RDataFrame::RDataFrame(std::string_view treeName, std::string_view filenameglob, const ColumnNames_t &defaultBranches)
-   : RInterface<RDFDetail::RLoopManager>(std::make_shared<RDFDetail::RLoopManager>(nullptr, defaultBranches))
+   : RInterface<RDFDetail::RLoopManager>(std::make_shared<RDFDetail::RLoopManager>(nullptr, defaultBranches), RDFInternal::RBookedCustomColumns( std::make_shared<RCustomColumnBasePtrMap_t>(), std::make_shared<ColumnNames_t>()))
 {
    const std::string treeNameInt(treeName);
    const std::string filenameglobInt(filenameglob);
@@ -735,7 +750,7 @@ RDataFrame::RDataFrame(std::string_view treeName, std::string_view filenameglob,
 /// See RInterface for the documentation of the methods available.
 RDataFrame::RDataFrame(std::string_view treeName, const std::vector<std::string> &filenames,
                        const ColumnNames_t &defaultBranches)
-   : RDF::RInterface<RDFDetail::RLoopManager>(std::make_shared<RDFDetail::RLoopManager>(nullptr, defaultBranches))
+   : RDF::RInterface<RDFDetail::RLoopManager>(std::make_shared<RDFDetail::RLoopManager>(nullptr, defaultBranches), RDFInternal::RBookedCustomColumns( std::make_shared<RCustomColumnBasePtrMap_t>(), std::make_shared<ColumnNames_t>()))
 {
    std::string treeNameInt(treeName);
    auto chain = std::make_shared<TChain>(treeNameInt.c_str());
@@ -754,7 +769,7 @@ RDataFrame::RDataFrame(std::string_view treeName, const std::vector<std::string>
 /// See RInterface for the documentation of the
 /// methods available.
 RDataFrame::RDataFrame(TTree &tree, const ColumnNames_t &defaultBranches)
-   : RInterface<RDFDetail::RLoopManager>(std::make_shared<RDFDetail::RLoopManager>(&tree, defaultBranches))
+   : RInterface<RDFDetail::RLoopManager>(std::make_shared<RDFDetail::RLoopManager>(&tree, defaultBranches), RDFInternal::RBookedCustomColumns( std::make_shared<RCustomColumnBasePtrMap_t>(), std::make_shared<ColumnNames_t>()))
 {
 }
 
@@ -766,7 +781,7 @@ RDataFrame::RDataFrame(TTree &tree, const ColumnNames_t &defaultBranches)
 /// generate those entries on the fly when some action is triggered,
 /// and it will do so for all the previously-defined temporary branches.
 RDataFrame::RDataFrame(ULong64_t numEntries)
-   : RInterface<RDFDetail::RLoopManager>(std::make_shared<RDFDetail::RLoopManager>(numEntries))
+   : RInterface<RDFDetail::RLoopManager>(std::make_shared<RDFDetail::RLoopManager>(numEntries), RDFInternal::RBookedCustomColumns( std::make_shared<RCustomColumnBasePtrMap_t>(), std::make_shared<ColumnNames_t>()))
 {
 }
 
@@ -777,7 +792,7 @@ RDataFrame::RDataFrame(ULong64_t numEntries)
 ///
 /// A dataframe associated to a datasource will query it to access column values.
 RDataFrame::RDataFrame(std::unique_ptr<RDataSource> ds, const ColumnNames_t &defaultBranches)
-   : RInterface<RDFDetail::RLoopManager>(std::make_shared<RDFDetail::RLoopManager>(std::move(ds), defaultBranches))
+   : RInterface<RDFDetail::RLoopManager>(std::make_shared<RDFDetail::RLoopManager>(std::move(ds), defaultBranches), RDFInternal::RBookedCustomColumns( std::make_shared<RCustomColumnBasePtrMap_t>(), std::make_shared<ColumnNames_t>()))
 {
 }
 

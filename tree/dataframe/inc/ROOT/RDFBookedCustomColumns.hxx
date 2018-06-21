@@ -22,20 +22,20 @@ namespace Internal {
 namespace RDF {
 
 struct RBookedCustomColumns{
-   using ColumnNames_t = ROOT::Detail::RDF::ColumnNames_t;
-   using ColumnNamesPtr_t = std::shared_ptr<ColumnNames_t>;
-
    using RCustomColumnBasePtrMap_t = std::map<std::string, std::shared_ptr<RCustomColumnBase>>;
-   using RCustomColumnBasePtrMapPtr_t = std::shared_ptr<RCustomColumnBasePtrMap_t>;
+   using RCustomColumnBasePtrMapPtr_t = std::shared_ptr<const RCustomColumnBasePtrMap_t>;
+   using ColumnNames_t = ROOT::Detail::RDF::ColumnNames_t;
+   using ColumnNamesPtr_t = std::shared_ptr<const ColumnNames_t>;
 
    RCustomColumnBasePtrMapPtr_t fCustomColumns;
    ColumnNamesPtr_t fCustomColumnsNames;
 
-   RBookedCustomColumns(){
-      fCustomColumnsNames=std::make_shared<ColumnNames_t>();
-      fCustomColumns=std::make_shared<RCustomColumnBasePtrMap_t>();
-   }
+   ////////////////////////////////////////////////////////////////////////////
+   /// \brief Copy-ctor for RBookedCustomColumns.
+   RBookedCustomColumns(const RBookedCustomColumns &) = default;
 
+   RBookedCustomColumns(RCustomColumnBasePtrMapPtr_t customColumns, ColumnNamesPtr_t customColumnNames): fCustomColumns(customColumns), fCustomColumnsNames(customColumnNames){
+   }
 };
 
 } // Namespace RDF
