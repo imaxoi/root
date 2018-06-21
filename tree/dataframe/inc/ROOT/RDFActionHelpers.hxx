@@ -49,18 +49,19 @@ namespace Detail {
 namespace RDF {
 
 template <typename Helper>
-class RActionImpl
-{
+class RActionImpl {
 public:
    // call Helper::FinalizeTask if present, do nothing otherwise
    template <typename T = Helper>
    auto CallFinalizeTask(unsigned int slot) -> decltype(&T::FinalizeTask, void())
    {
-      static_cast<Helper*>(this)->FinalizeTask(slot);
+      static_cast<Helper *>(this)->FinalizeTask(slot);
    }
 
    template <typename... Args>
-   void CallFinalizeTask(unsigned int, Args...) {}
+   void CallFinalizeTask(unsigned int, Args...)
+   {
+   }
 };
 
 } // namespace RDF
@@ -464,7 +465,7 @@ public:
 // Case 4.: The column is an RVec, the collection is a vector
 // Optimisations, transformations from RVecs to vectors
 template <typename RealT_t>
-   class TakeHelper<RealT_t, RVec<RealT_t>, std::vector<RealT_t>>
+class TakeHelper<RealT_t, RVec<RealT_t>, std::vector<RealT_t>>
    : public RActionImpl<TakeHelper<RealT_t, RVec<RealT_t>, std::vector<RealT_t>>> {
    std::vector<std::shared_ptr<std::vector<std::vector<RealT_t>>>> fColls;
 
@@ -788,7 +789,6 @@ public:
       } else {
          Warning("Snapshot", "A lazy Snapshot action was booked but never triggered.");
       }
-
    }
 };
 
@@ -799,8 +799,8 @@ class SnapshotHelperMT : public RActionImpl<SnapshotHelperMT<BranchTypes...>> {
    std::unique_ptr<ROOT::Experimental::TBufferMerger> fMerger; // must use a ptr because TBufferMerger is not movable
    std::vector<std::shared_ptr<ROOT::Experimental::TBufferMergerFile>> fOutputFiles;
    std::vector<std::unique_ptr<TTree>> fOutputTrees; // must come _after_ output files to be deleted _before_ them
-   std::vector<int> fIsFirstEvent;        // vector<bool> is evil
-   const std::string fFileName;           // name of the output file name
+   std::vector<int> fIsFirstEvent;                   // vector<bool> is evil
+   const std::string fFileName;                      // name of the output file name
    const std::string fDirName;            // name of TFile subdirectory in which output must be written (possibly empty)
    const std::string fTreeName;           // name of output tree
    const RSnapshotOptions fOptions;       // struct holding options to pass down to TFile and TTree in this action
@@ -905,7 +905,6 @@ public:
          Warning("Snapshot", "A lazy Snapshot action was booked but never triggered.");
       }
    }
-
 };
 
 template <typename Acc, typename Merge, typename R, typename T, typename U,
