@@ -371,9 +371,6 @@ void ResetRDFValueTuple(ValueTuple &values, std::index_sequence<S...>)
 }
 
 class RActionBase {
-   using RCustomColumnBasePtr_t = std::shared_ptr<RCustomColumnBase>;
-   using RcustomColumnBasePtrMap_t = std::map<std::string, RCustomColumnBasePtr_t>;
-
 protected:
    RLoopManager *fLoopManager; ///< A raw pointer to the RLoopManager at the root of this functional
                                /// graph. It is only guaranteed to contain a valid address during an
@@ -394,6 +391,7 @@ public:
    virtual void InitSlot(TTreeReader *r, unsigned int slot) = 0;
    virtual void TriggerChildrenCount() = 0;
    virtual void ClearValueReaders(unsigned int slot) = 0;
+   virtual void ClearTask(unsigned int slot) = 0;
    /// This method is invoked to update a partial result during the event loop, right before passing the result to a
    /// user-defined callback registered via RResultPtr::RegisterCallback
    virtual void *PartialUpdate(unsigned int slot) = 0;
@@ -450,6 +448,16 @@ public:
    void TriggerChildrenCount() final { fPrevData.IncrChildrenCount(); }
 
    virtual void ClearValueReaders(unsigned int slot) final { ResetRDFValueTuple(fValues[slot], TypeInd_t()); }
+
+   virtual void ClearTask(unsigned int slot) final {
+      for (auto &column :*(fCustomColumns.fCustomColumns)){
+         column.second->ClearValueReaders(slot);
+      }
+
+     ClearValueReaders(slot);
+
+   }
+
 
    /// This method is invoked to update a partial result during the event loop, right before passing the result to a
    /// user-defined callback registered via RResultPtr::RegisterCallback
@@ -509,7 +517,9 @@ class RCustomColumn final : public RCustomColumnBase {
 
    std::vector<RDFInternal::RDFValueTuple_t<ColumnTypes_t>> fValues;
 
+   // The initialization and cleaning are called by the nodes that own this columns. There could be more than one.
    bool fIsInitialized=false;
+   bool fIsCleaned=false;
 
 public:
    RCustomColumn(std::string_view name, F &&expression, const ColumnNames_t &bl, unsigned int nSlots,
@@ -577,7 +587,13 @@ public:
       (void)entry;
    }
 
-   void ClearValueReaders(unsigned int slot) final { RDFInternal::ResetRDFValueTuple(fValues[slot], TypeInd_t()); }
+   void ClearValueReaders(unsigned int slot) final {
+      if(fIsCleaned)
+         return;
+      RDFInternal::ResetRDFValueTuple(fValues[slot], TypeInd_t());
+      fIsCleaned=true;
+   }
+
 };
 
 class RFilterBase {
@@ -625,6 +641,7 @@ public:
       std::fill(fRejected.begin(), fRejected.end(), 0);
    }
    virtual void ClearValueReaders(unsigned int slot) = 0;
+   virtual void ClearTask(unsigned int slot) = 0;
    virtual void InitNode();
 };
 
@@ -652,6 +669,7 @@ public:
    void TriggerChildrenCount() override final;
    void ResetReportCount() override final;
    void ClearValueReaders(unsigned int slot) override final;
+   void ClearTask(unsigned int slot) override final;
    void InitNode() override final;
 };
 
@@ -743,6 +761,15 @@ public:
    virtual void ClearValueReaders(unsigned int slot) final
    {
       RDFInternal::ResetRDFValueTuple(fValues[slot], TypeInd_t());
+   }
+
+   virtual void ClearTask(unsigned int slot) final {
+      for (auto &column :*(fCustomColumns.fCustomColumns)){
+         column.second->ClearValueReaders(slot);
+      }
+
+     ClearValueReaders(slot);
+
    }
 };
 

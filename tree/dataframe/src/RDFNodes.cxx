@@ -177,6 +177,15 @@ void RJittedFilter::ClearValueReaders(unsigned int slot)
    fConcreteFilter->ClearValueReaders(slot);
 }
 
+void RJittedFilter::ClearTask(unsigned int slot)
+{
+   R__ASSERT(fConcreteFilter != nullptr);
+   for (auto &column :*(fCustomColumns.fCustomColumns)){
+         column.second->ClearValueReaders(slot);
+      }
+   fConcreteFilter->ClearValueReaders(slot);
+}
+
 void RJittedFilter::InitNode()
 {
    R__ASSERT(fConcreteFilter != nullptr);
@@ -397,9 +406,6 @@ void RLoopManager::InitNodeSlots(TTreeReader *r, unsigned int slot)
 {
    // booked branches must be initialized first because other nodes might need to point to the values they encapsulate
 
-   //- TODO: This should not be needed anymore
-//    for (auto &bookedBranch : fBookedCustomColumns)
-//       bookedBranch.second->InitSlot(r, slot);
    for (auto &ptr : fBookedActions)
       ptr->InitSlot(r, slot);
    for (auto &ptr : fBookedFilters)
@@ -417,9 +423,6 @@ void RLoopManager::InitNodes()
    EvalChildrenCounts();
    for (auto &filter : fBookedFilters)
       filter->InitNode();
-   //- TODO: This should not be needed anymore
-//    for (auto &customColumn : fBookedCustomColumns)
-//       customColumn.second->InitNode();
    for (auto &range : fBookedRanges)
       range->InitNode();
    for (auto &ptr : fBookedActions)
@@ -456,12 +459,9 @@ void RLoopManager::CleanUpNodes()
 void RLoopManager::CleanUpTask(unsigned int slot)
 {
    for (auto &ptr : fBookedActions)
-      ptr->ClearValueReaders(slot);
+      ptr->ClearTask(slot);
    for (auto &ptr : fBookedFilters)
-      ptr->ClearValueReaders(slot);
-   //- TODO: Ask about this. I should move the cleanup somewhere else.
-//    for (auto &pair : fBookedCustomColumns)
-//       pair.second->ClearValueReaders(slot);
+      ptr->ClearTask(slot);
 }
 
 /// Jit all actions that required runtime column type inference, and clean the `fToJit` member variable.
