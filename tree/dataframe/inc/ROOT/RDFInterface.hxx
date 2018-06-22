@@ -222,25 +222,25 @@ public:
    /// Refer to the first overload of this method for the full documentation.
    RInterface<RDFDetail::RJittedFilter, DS_t> Filter(std::string_view expression, std::string_view name = "")
    {
-      std::cout << "JITTING" << std::endl;
-      //- TODO: It's JITTING
-      /*auto df = GetLoopManager();
+      auto df = GetLoopManager();
       const auto &aliasMap = df->GetAliasMap();
       auto *const tree = df->GetTree();
       const auto branches = tree ? RDFInternal::GetBranchNames(*tree) : ColumnNames_t();
-      const auto &customColumns = fValidCustomColumns;
 
       auto upcastNode = RDFInternal::UpcastNode(fProxiedPtr);
-      RInterface<typename decltype(upcastNode)::element_type> upcastInterface(upcastNode, fImplWeakPtr,
-                                                                              fValidCustomColumns, fBranchNames,
-      fDataSource); const auto prevNodeTypeName = upcastInterface.GetNodeTypeName(); const auto jittedFilter =
-      std::make_shared<RDFDetail::RJittedFilter>(df.get(), name, fValidCustomColumns, fBookedCustomColumns);
-      RDFInternal::BookFilterJit(jittedFilter.get(), upcastNode.get(), prevNodeTypeName, name, expression, aliasMap,
-      branches, customColumns, tree, fDataSource, df->GetID());
 
+      RInterface<typename decltype(upcastNode)::element_type> upcastInterface(upcastNode, fImplWeakPtr, fCustomColumns,
+                                                                              fDataSource);
+
+      const auto prevNodeTypeName = upcastInterface.GetNodeTypeName();
+      const auto jittedFilter = std::make_shared<RDFDetail::RJittedFilter>(df.get(), name, fCustomColumns);
+      RDFInternal::BookFilterJit(jittedFilter.get(), upcastNode.get(), prevNodeTypeName, name, expression, aliasMap,
+                                 branches, fCustomColumns, tree, fDataSource, df->GetID());
       df->Book(jittedFilter);
-      auto newInterface= RInterface<RDFDetail::RJittedFilter, DS_t>(jittedFilter, fImplWeakPtr, fValidCustomColumns,
-      fDataSource); newInterface.fBookedCustomColumns = fBookedCustomColumns; return newInterface;*/
+      auto newInterface =
+         RInterface<RDFDetail::RJittedFilter, DS_t>(jittedFilter, fImplWeakPtr, fCustomColumns, fDataSource);
+
+      return newInterface;
    }
 
    // clang-format off
@@ -339,21 +339,18 @@ public:
    /// Refer to the first overload of this method for the full documentation.
    RInterface<Proxied, DS_t> Define(std::string_view name, std::string_view expression)
    {
-      std::cout << "JITTING" << std::endl;
-      //- TODO: It's JITTED
-      /*
-      auto lm = GetLoopManager();
+      //- TODO JIT
+      /*auto lm = GetLoopManager();
       // this check must be done before jitting lest we throw exceptions in jitted code
-      RDFInternal::CheckCustomColumn(name, lm->GetTree(), fValidCustomColumns,
+      RDFInternal::CheckCustomColumn(name, lm->GetTree(), *(fCustomColumns,fCustomColumnsNames),
                                      fDataSource ? fDataSource->GetColumnNames() : ColumnNames_t{});
 
-      RDFInternal::BookDefineJit(name, expression, *lm, fDataSource);
+      RDFInternal::BookDefineJit(name, expression, *lm, fDataSource, fCustomColumns);
 
-      RInterface<Proxied, DS_t> newInterface(fProxiedPtr, fImplWeakPtr, fValidCustomColumns,
+      RInterface<Proxied, DS_t> newInterface(fProxiedPtr, fImplWeakPtr, fCustomColumns,
                                              fBranchNames, fDataSource);
-      newInterface.fValidCustomColumns.emplace_back(name);
-      return newInterface;
-      */
+      //newInterface.fValidCustomColumns.emplace_back(name);
+      return newInterface;*/
    }
 
    ////////////////////////////////////////////////////////////////////////////
@@ -1621,24 +1618,30 @@ private:
    RResultPtr<ActionResultType>
    CreateAction(const ColumnNames_t &columns, const std::shared_ptr<ActionResultType> &r, const int nColumns = -1)
    {
-      std::cout << "\n"
-                << "[[[[[[[[[[[[JITTING ============ JITTING]]]]]]]]]]]]" << std::endl;
-      //- TODO: This is JITTED stuff
-      /*auto lm = GetLoopManager();
+      auto lm = GetLoopManager();
+
       auto realNColumns = (nColumns > -1 ? nColumns : sizeof...(BranchTypes));
-      const auto validColumnNames =
-         RDFInternal::GetValidatedColumnNames(*lm, realNColumns, columns, *(fCustomColumns.fCustomColumnsNames),
-      fDataSource); const unsigned int nSlots = lm->GetNSlots(); const auto &customColumns = fValidCustomColumns; auto
-      tree = lm->GetTree(); auto rOnHeap = RDFInternal::MakeSharedOnHeap(r); auto upcastNode =
-      RDFInternal::UpcastNode(fProxiedPtr); RInterface<TypeTraits::TakeFirstParameter_t<decltype(upcastNode)>>
-      upcastInterface( upcastNode, fImplWeakPtr, fCustomColumns fDataSource); auto resultProxyAndActionPtrPtr =
-      MakeResultPtr(r, lm); auto &resultProxy = resultProxyAndActionPtrPtr.first; auto actionPtrPtrOnHeap =
-      RDFInternal::MakeSharedOnHeap(resultProxyAndActionPtrPtr.second); auto toJit =
+
+      const auto validColumnNames = GetValidatedColumnNames(realNColumns, columns);
+      const unsigned int nSlots = lm->GetNSlots();
+
+      auto tree = lm->GetTree();
+      auto rOnHeap = RDFInternal::MakeSharedOnHeap(r);
+      auto upcastNode = RDFInternal::UpcastNode(fProxiedPtr);
+
+      RInterface<TypeTraits::TakeFirstParameter_t<decltype(upcastNode)>> upcastInterface(upcastNode, fImplWeakPtr,
+                                                                                         fCustomColumns, fDataSource);
+
+      auto resultProxyAndActionPtrPtr = MakeResultPtr(r, lm);
+      auto &resultProxy = resultProxyAndActionPtrPtr.first;
+      auto actionPtrPtrOnHeap = RDFInternal::MakeSharedOnHeap(resultProxyAndActionPtrPtr.second);
+
+      auto toJit =
          RDFInternal::JitBuildAndBook(validColumnNames, upcastInterface.GetNodeTypeName(), upcastNode.get(),
                                       typeid(std::shared_ptr<ActionResultType>), typeid(ActionType), rOnHeap, tree,
-                                      nSlots, customColumns, fDataSource, actionPtrPtrOnHeap, lm->GetID());
+                                      nSlots, fCustomColumns, fDataSource, actionPtrPtrOnHeap, lm->GetID());
       lm->ToJit(toJit);
-      return resultProxy;*/
+      return resultProxy;
    }
 
    template <typename F, typename CustomColumnType, typename RetType = typename TTraits::CallableTraits<F>::ret_type>
