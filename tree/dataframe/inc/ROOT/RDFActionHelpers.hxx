@@ -799,9 +799,9 @@ class SnapshotHelperMT : public RActionImpl<SnapshotHelperMT<BranchTypes...>> {
    const unsigned int fNSlots;
    std::unique_ptr<ROOT::Experimental::TBufferMerger> fMerger; // must use a ptr because TBufferMerger is not movable
    std::vector<std::shared_ptr<ROOT::Experimental::TBufferMergerFile>> fOutputFiles;
-   std::vector<std::unique_ptr<TTree>> fOutputTrees; // must come _after_ output files to be deleted _before_ them
-   std::vector<int> fIsFirstEvent;                   // vector<bool> is evil
-   const std::string fFileName;                      // name of the output file name
+   std::vector<std::stack<std::unique_ptr<TTree>>> fOutputTrees;
+   std::vector<int> fIsFirstEvent;        // vector<bool> is evil
+   const std::string fFileName;           // name of the output file name
    const std::string fDirName;            // name of TFile subdirectory in which output must be written (possibly empty)
    const std::string fTreeName;           // name of output tree
    const RSnapshotOptions fOptions;       // struct holding options to pass down to TFile and TTree in this action

@@ -237,20 +237,21 @@ public:
    virtual void Update(unsigned int slot, Long64_t entry) = 0;
    virtual void ClearValueReaders(unsigned int slot) = 0;
    bool IsDataSourceColumn() const { return fIsDataSourceColumn; }
-   void InitNode();
+   virtual void InitNode();
 };
 
 /// A wrapper around a concrete RCustomColumn, which forwards all calls to it
 /// RJittedCustomColumn is a placeholder that is put in the collection of custom columns in place of a RCustomColumn
 /// that will be just-in-time compiled. Jitted code will assign the concrete RCustomColumn to this RJittedCustomColumn
 /// before the event-loop starts.
-class RJittedCustomColumn : public RCustomColumnBase
-{
+class RJittedCustomColumn : public RCustomColumnBase {
    std::unique_ptr<RCustomColumnBase> fConcreteCustomColumn = nullptr;
 
 public:
-   RJittedCustomColumn(RLoopManager &lm, std::string_view name, RDFInternal::RBookedCustomColumns customColumns)
-      : RCustomColumnBase(&lm, name, lm.GetNSlots(), /*isDSColumn=*/false, customColumns) {}
+   RJittedCustomColumn(std::string_view name, RDFInternal::RBookedCustomColumns customColumns, unsigned int nSlots)
+      : RCustomColumnBase(name, nSlots, /*isDSColumn=*/false, customColumns)
+   {
+   }
 
    void SetCustomColumn(std::unique_ptr<RCustomColumnBase> c) { fConcreteCustomColumn = std::move(c); }
 
@@ -527,8 +528,6 @@ private:
 namespace Detail {
 namespace RDF {
 
-
-
 template <typename F, typename ExtraArgsTag = CustomColExtraArgs::None>
 class RCustomColumn final : public RCustomColumnBase {
    // shortcuts
@@ -708,6 +707,7 @@ public:
    void ResetReportCount() final;
    void ClearValueReaders(unsigned int slot) final;
    void InitNode() final;
+   void ClearTask(unsigned int slot) final;
 };
 
 template <typename FilterF, typename PrevDataFrame>
@@ -998,9 +998,10 @@ T &TColumnValue<T>::Get(Long64_t entry)
 // The storage is not contiguous or we don't know yet: we cannot but copy into the tvec
 #ifndef NDEBUG
          if (!fCopyWarningPrinted) {
-            Warning("TColumnValue::Get", "Branch %s hangs from a non-split branch. For this reason, it cannot be "
-                                         "accessed via a RVec. A copy is being performed in order to properly read the "
-                                         "content.",
+            Warning("TColumnValue::Get",
+                    "Branch %s hangs from a non-split branch. For this reason, it cannot be "
+                    "accessed via a RVec. A copy is being performed in order to properly read the "
+                    "content.",
                     readerArray.GetBranchName());
             fCopyWarningPrinted = true;
          }

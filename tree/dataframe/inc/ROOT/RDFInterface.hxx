@@ -324,18 +324,19 @@ public:
    /// Refer to the first overload of this method for the full documentation.
    RInterface<Proxied, DS_t> Define(std::string_view name, std::string_view expression)
    {
-      //- TODO JIT
-      /*auto lm = GetLoopManager();
       // this check must be done before jitting lest we throw exceptions in jitted code
-      RDFInternal::CheckCustomColumn(name, lm->GetTree(), *(fCustomColumns,fCustomColumnsNames),
+      /*RDFInternal::CheckCustomColumn(name, lm->GetTree(), lm->GetCustomColumnNames(),
                                      fDataSource ? fDataSource->GetColumnNames() : ColumnNames_t{});
 
-      RDFInternal::BookDefineJit(name, expression, *lm, fDataSource, fCustomColumns);
+      RDFInternal::CheckCustomColumn(name, loopManager->GetTree(), *(fCustomColumns.fCustomColumnsNames),
+                                     fDataSource ? fDataSource->GetColumnNames() : ColumnNames_t{});
 
-      RInterface<Proxied, DS_t> newInterface(fProxiedPtr, fImplWeakPtr, fCustomColumns,
+      RDFInternal::BookDefineJit(name, expression, *lm, fDataSource);
+
+      RInterface<Proxied, DS_t> newInterface(fProxiedPtr, fImplWeakPtr, fValidCustomColumns,
                                              fBranchNames, fDataSource);
-      //newInterface.fValidCustomColumns.emplace_back(name);
-      return newInterface;*/
+      newInterface.fValidCustomColumns.emplace_back(name);
+return newInterface;*/
    }
 
    ////////////////////////////////////////////////////////////////////////////
@@ -1490,7 +1491,8 @@ private:
       // Entry number column
       const auto entryColName = "tdfentry_";
       auto entryColGen = [](unsigned int, ULong64_t entry) { return entry; };
-      using NewColEntry_t = RDFDetail::RCustomColumn<decltype(entryColGen), RDFDetail::TCCHelperTypes::TSlotAndEntry>;
+      using NewColEntry_t =
+         RDFDetail::RCustomColumn<decltype(entryColGen), RDFDetail::CustomColExtraArgs::SlotAndEntry>;
 
       columnNames->emplace_back(entryColName);
       (*(columns))[std::string(entryColName)] =
@@ -1500,7 +1502,7 @@ private:
       // Slot number column
       const auto slotColName = "tdfslot_";
       auto slotColGen = [](unsigned int slot) { return slot; };
-      using NewColSlot_t = RDFDetail::RCustomColumn<decltype(slotColGen), RDFDetail::TCCHelperTypes::TSlot>;
+      using NewColSlot_t = RDFDetail::RCustomColumn<decltype(slotColGen), RDFDetail::CustomColExtraArgs::Slot>;
 
       columnNames->emplace_back(slotColName);
       (*(columns))[std::string(slotColName)] =
@@ -1588,8 +1590,8 @@ private:
                                                                 std::make_index_sequence<nColumns>(),
                                                                 RDFInternal::TypeList<BranchTypes...>())
                                     : fCustomColumns;
-      auto actionPtr = RDFInternal::BuildAndBook<BranchTypes...>(selectedCols, r, nSlots, *lm, *fProxiedPtr,
-                                                                 (ActionType *)nullptr, newColumns);
+      auto actionPtr =
+         RDFInternal::BuildAndBook<BranchTypes...>(selectedCols, r, nSlots, *lm, *fProxiedPtr, ActionTag{}, newColumns);
       return MakeResultPtr(r, lm, actionPtr);
    }
 
@@ -1620,7 +1622,8 @@ private:
       auto actionPtrPtrOnHeap = RDFInternal::MakeSharedOnHeap(resultProxyAndActionPtrPtr.second);
 
       auto toJit =
-         RDFInternal::JitBuildAndBook(validColumnNames, upcastInterface.GetNodeTypeName(), upcastNode.get(),                                      typeid(std::shared_ptr<ActionResultType>), typeid(ActionType), rOnHeap, tree,
+         RDFInternal::JitBuildAndBook(validColumnNames, upcastInterface.GetNodeTypeName(), upcastNode.get(),
+                                      typeid(std::shared_ptr<ActionResultType>), typeid(ActionTag), rOnHeap, tree,
                                       nSlots, fCustomColumns, fDataSource, actionPtrPtrOnHeap, lm->GetID());
 
       lm->ToJit(toJit);

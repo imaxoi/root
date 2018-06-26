@@ -553,20 +553,20 @@ void BookFilterJit(RJittedFilter *jittedFilter, void *prevNode, std::string_view
 }
 
 // Jit a Define call
-void BookDefineJit(std::string_view name, std::string_view expression, RLoopManager &lm, RDataSource *ds, RDFInternal::RBookedCustomColumns customCols)
+void BookDefineJit(std::string_view name, std::string_view expression, RLoopManager &lm, RDataSource *ds,
+                   RDFInternal::RBookedCustomColumns customCols)
 {
-   const auto &aliasMap = lm.GetAliasMap();
+   /*const auto &aliasMap = lm.GetAliasMap();
    auto *const tree = lm.GetTree();
    const auto branches = tree ? RDFInternal::GetBranchNames(*tree) : ColumnNames_t();
    const auto namespaceID = lm.GetID();
    const auto &dsColumns = ds ? ds->GetColumnNames() : ColumnNames_t{};
 
    // not const because `ColumnTypesAsStrings` might delete redundant matches and replace variable names
-   auto usedBranches = FindUsedColumnNames(expression, branches, *(customCols.fCustomColumnsNames), dsColumns, aliasMap);
-   auto varNames = ReplaceDots(usedBranches);
-   auto dotlessExpr = std::string(expression);
-   const auto usedColTypes =
-      ColumnTypesAsString(usedBranches, varNames, aliasMap, *(customCols.fCustomColumnsNames), tree, ds, dotlessExpr, namespaceID);
+   auto usedBranches = FindUsedColumnNames(expression, branches, *(customCols.fCustomColumnsNames), dsColumns,
+   aliasMap); auto varNames = ReplaceDots(usedBranches); auto dotlessExpr = std::string(expression); const auto
+   usedColTypes = ColumnTypesAsString(usedBranches, varNames, aliasMap, *(customCols.fCustomColumnsNames), tree, ds,
+   dotlessExpr, namespaceID);
 
    TRegexp re("[^a-zA-Z0-9_]return[^a-zA-Z0-9_]");
    Ssiz_t matchedLen;
@@ -604,7 +604,7 @@ void BookDefineJit(std::string_view name, std::string_view expression, RLoopMana
 
    lm.AddCustomColumnName(name);
    lm.Book(jittedCustomColumn);
-   lm.ToJit(defineInvocation.str());
+   lm.ToJit(defineInvocation.str());*/
 }
 
 // Jit and call something equivalent to "this->BuildAndBook<BranchTypes...>(params...)"

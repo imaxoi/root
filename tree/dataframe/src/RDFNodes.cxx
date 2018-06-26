@@ -54,7 +54,6 @@ RActionBase::RActionBase(RLoopManager *implPtr, const unsigned int nSlots,
 {
 }
 
-
 // Some extern instaniations to speed-up compilation/interpretation time
 // These are not active if c++17 is enabled because of a bug in our clang
 // See ROOT-9499.
@@ -76,14 +75,16 @@ template class TColumnValue<std::vector<double>>;
 template class TColumnValue<std::vector<Long64_t>>;
 template class TColumnValue<std::vector<ULong64_t>>;
 #endif
-} // end NS RDF
-} // end NS Internal
-} // end NS ROOT
+} // namespace RDF
+} // namespace Internal
+} // namespace ROOT
 
-RCustomColumnBase::RCustomColumnBase(RLoopManager *lm, std::string_view name, const unsigned int nSlots,
-                                     const bool isDSColumn)
-   : fLoopManager(lm), fName(name), fNSlots(nSlots), fIsDataSourceColumn(isDSColumn),
-     fLastCheckedEntry(std::vector<Long64_t>(fNSlots, -1)), fCustomColumns(customColumns) {}
+RCustomColumnBase::RCustomColumnBase(std::string_view name, const unsigned int nSlots, const bool isDSColumn,
+                                     RDFInternal::RBookedCustomColumns customColumns)
+   : fName(name), fNSlots(nSlots), fIsDataSourceColumn(isDSColumn),
+     fLastCheckedEntry(std::vector<Long64_t>(fNSlots, -1)), fCustomColumns(customColumns)
+{
+}
 
 // pin vtable. Work around cling JIT issue.
 RCustomColumnBase::~RCustomColumnBase() = default;
