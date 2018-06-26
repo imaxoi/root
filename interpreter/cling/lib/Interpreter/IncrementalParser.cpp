@@ -17,6 +17,7 @@
 #include "DeclCollector.h"
 #include "DeclExtractor.h"
 #include "DynamicLookup.h"
+#include "IncrementalCUDADeviceCompiler.h"
 #include "IncrementalExecutor.h"
 #include "NullDerefProtectionTransformer.h"
 #include "TransactionPool.h"
@@ -44,6 +45,8 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Serialization/ASTWriter.h"
+#include "clang/Serialization/ASTReader.h"
+#include "llvm/Support/Path.h"
 
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -117,7 +120,7 @@ namespace {
       m_PrevClient.EndSourceFile();
       SyncDiagCountWithTarget();
     }
-  
+
     void finish() override {
       m_PrevClient.finish();
       SyncDiagCountWithTarget();
@@ -212,6 +215,34 @@ namespace cling {
     m_DiagConsumer.reset(new FilteringDiagConsumer(Diag, false));
 
     initializeVirtualFile();
+
+    if(m_CI->getFrontendOpts().ProgramAction != frontend::ParseSyntaxOnly &&
+      m_Interpreter->getOptions().CompilerOpts.CUDA){
+        // Create temporary folder for all files, which the CUDA device compiler
+        // will generate.
+        llvm::SmallString<256> TmpPath;
+        llvm::StringRef sep = llvm::sys::path::get_separator().data();
+        llvm::sys::path::system_temp_directory(false, TmpPath);
+        TmpPath.append(sep.data());
+        TmpPath.append("cling-%%%%");
+        TmpPath.append(sep.data());
+
+        llvm::SmallString<256> TmpFolder;
+        llvm::sys::fs::createUniqueFile(TmpPath.c_str(), TmpFolder);
+        llvm::sys::fs::create_directory(TmpFolder);
+
+        // The CUDA fatbin file is the connection beetween the CUDA device
+        // compiler and the CodeGen of cling. The file will every time reused.
+        if(getCI()->getCodeGenOpts().CudaGpuBinaryFileNames.empty())
+          getCI()->getCodeGenOpts().CudaGpuBinaryFileNames.push_back(
+            std::string(TmpFolder.c_str()) + "cling.fatbin");
+
+        m_CUDACompiler.reset(
+          new IncrementalCUDADeviceCompiler(TmpFolder.c_str(),
+                                            m_CI->getCodeGenOpts().OptimizationLevel,
+                                            m_Interpreter->getOptions(),
+                                            *m_CI));
+    }
   }
 
   bool
@@ -791,6 +822,9 @@ namespace cling {
       return kFailed;
     else if (Diags.getNumWarnings())
       return kSuccessWithWarnings;
+
+    if(!m_Interpreter->isInSyntaxOnlyMode() && m_CI->getLangOpts().CUDA )
+      m_CUDACompiler->compileDeviceCode(input, m_Consumer->getTransaction());
 
     return kSuccess;
   }

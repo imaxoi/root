@@ -1034,20 +1034,6 @@ if(builtin_ftgl)
   set(FTGL_LIBRARIES FTGL)
 endif()
 
-#---Check for chirp--------------------------------------------------------------------
-if(chirp)
-  find_package(chirp)
-  if(NOT CHIRP_FOUND)
-    if(fail-on-missing)
-      message(FATAL_ERROR "chirp library not found and is required (chirp option enabled)")
-    else()
-      message(STATUS "chirp library not found. Set variable CHIRP_DIR to point to your chirp installation")
-      message(STATUS "For the time being switching OFF 'chirp' option")
-      set(chirp OFF CACHE BOOL "Disabled because chirp not found (${chirp_description})" FORCE)
-    endif()
-  endif()
-endif()
-
 #---Check for R/Rcpp/RInside--------------------------------------------------------------------
 #added search of R packages here to remove multiples searches
 if(r)
@@ -1609,11 +1595,10 @@ if (testing)
 
 endif()
 
-#---Report non implemented options---------------------------------------------------
-foreach(opt afs glite sapdb srp)
+#---Report removed options---------------------------------------------------
+foreach(opt afs glite sapdb srp chirp ios)
   if(${opt})
-    message(STATUS ">>> Option '${opt}' not implemented yet! Signal your urgency to pere.mato@cern.ch")
-    set(${opt} OFF CACHE BOOL "Disabled because not implemented yet (${${opt}_description})" FORCE)
+    message(FATAL_ERROR ">>> Option '${opt}' has been removed in ROOT v6.16.")
   endif()
 endforeach()
 
