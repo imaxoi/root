@@ -228,7 +228,7 @@ void BookFilterJit(RJittedFilter *jittedFilter, void *prevNode, std::string_view
                    const RDFInternal::RBookedCustomColumns &customCols, TTree *tree, RDataSource *ds,
                    unsigned int namespaceID);
 
-void BookDefineJit(std::string_view name, std::string_view expression, RLoopManager &lm, RDataSource *ds);
+void BookDefineJit(std::string_view name, std::string_view expression, RLoopManager &lm, RDataSource *ds, RDFInternal::RBookedCustomColumns customCols);
 
 std::string JitBuildAndBook(const ColumnNames_t &bl, const std::string &prevNodeTypename, void *prevNode,
                             const std::type_info &art, const std::type_info &at, const void *r, TTree *tree,
@@ -335,19 +335,21 @@ void JitFilterHelper(F &&f, const ColumnNames_t &cols, std::string_view name, RJ
 }
 
 template <typename F>
-void JitDefineHelper(F &&f, const ColumnNames_t &cols, std::string_view name, RLoopManager *lm)
+void JitDefineHelper(F &&f, const ColumnNames_t &cols, std::string_view name, RLoopManager *lm, RDFInternal::RBookedCustomColumns customCols)
 {
-   std::cout << "JITTING" << std::endl;
    using NewCol_t = RCustomColumn<F, TCCHelperTypes::TNothing>;
    using ColTypes_t = typename TTraits::CallableTraits<F>::arg_types;
    constexpr auto nColumns = ColTypes_t::list_size;
 
    auto ds = lm->GetDataSource();
-   //- TODO: JITTING
+   auto newColumns = ds ? RDFInternal::AddDSColumns(cols, *customColumns, *ds, lm.GetNSlots(),
+                                                    std::make_index_sequence<nColumns>(), ColTypes_t())
+                        : *customColumns;
+
    /*if (ds)
       RDFInternal::DefineDataSourceColumns(cols, *lm, *ds, std::make_index_sequence<nColumns>(), ColTypes_t());*/
 
-   lm->Book(std::make_shared<NewCol_t>(name, std::move(f), cols, lm));
+   //- lm->Book(std::make_shared<NewCol_t>(name, std::move(f), cols, lm));
 }
 
 /// Convenience function invoked by jitted code to build action nodes at runtime
