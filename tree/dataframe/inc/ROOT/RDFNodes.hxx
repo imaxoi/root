@@ -924,7 +924,9 @@ template <typename T>
 void TColumnValue<T>::SetTmpColumn(unsigned int slot, ROOT::Detail::RDF::RCustomColumnBase *customColumn)
 {
    fCustomColumns.emplace(customColumn);
-   if (customColumn->GetTypeId() != typeid(T))
+   // Here we compare names and not typeinfos since they may come from two different contexts: a compiled
+   // and a jitted one.
+   if (0 != strcmp(customColumn->GetTypeId().name(), typeid(T).name()))
       throw std::runtime_error(
          std::string("TColumnValue: type specified for column \"" + customColumn->GetName() + "\" is ") +
          TypeID2TypeName(typeid(T)) + " but temporary column has type " + TypeID2TypeName(customColumn->GetTypeId()));
@@ -990,10 +992,8 @@ T &TColumnValue<T>::Get(Long64_t entry)
 // The storage is not contiguous or we don't know yet: we cannot but copy into the tvec
 #ifndef NDEBUG
          if (!fCopyWarningPrinted) {
-            Warning("TColumnValue::Get",
-                    "Branch %s hangs from a non-split branch. For this reason, it cannot be "
-                    "accessed via a RVec. A copy is being performed in order to properly read the "
-                    "content.",
+            Warning("TColumnValue::Get", "Branch %s hangs from a non-split branch. A copy is being performed in order "
+                                         "to properly read the content.",
                     readerArray.GetBranchName());
             fCopyWarningPrinted = true;
          }
