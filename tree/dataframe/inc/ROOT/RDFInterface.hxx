@@ -324,19 +324,25 @@ public:
    /// Refer to the first overload of this method for the full documentation.
    RInterface<Proxied, DS_t> Define(std::string_view name, std::string_view expression)
    {
-      // this check must be done before jitting lest we throw exceptions in jitted code
-      /*RDFInternal::CheckCustomColumn(name, lm->GetTree(), lm->GetCustomColumnNames(),
-                                     fDataSource ? fDataSource->GetColumnNames() : ColumnNames_t{});
+      using RCustomColumnBasePtrMap_t = std::map<std::string, std::shared_ptr<RCustomColumnBase>>;
 
+      auto loopManager = GetLoopManager();
       RDFInternal::CheckCustomColumn(name, loopManager->GetTree(), *(fCustomColumns.fCustomColumnsNames),
                                      fDataSource ? fDataSource->GetColumnNames() : ColumnNames_t{});
 
-      RDFInternal::BookDefineJit(name, expression, *lm, fDataSource);
+      auto jitted = RDFInternal::BookDefineJit(name, expression, *loopManager, fDataSource, fCustomColumns);
 
-      RInterface<Proxied, DS_t> newInterface(fProxiedPtr, fImplWeakPtr, fValidCustomColumns,
-                                             fBranchNames, fDataSource);
-      newInterface.fValidCustomColumns.emplace_back(name);
-return newInterface;*/
+      auto newCols = std::make_shared<RCustomColumnBasePtrMap_t>(*(fCustomColumns.fCustomColumns));
+      auto newColsNames = std::make_shared<ColumnNames_t>(*(fCustomColumns.fCustomColumnsNames));
+
+      newColsNames->emplace_back(name);
+      (*newCols)[std::string(name)]=jitted;
+
+      RInterface<Proxied, DS_t> newInterface(
+         fProxiedPtr, fImplWeakPtr, RDFInternal::RBookedCustomColumns(std::move(newCols), std::move(newColsNames)),
+         fDataSource);
+
+      return newInterface;
    }
 
    ////////////////////////////////////////////////////////////////////////////
@@ -668,7 +674,7 @@ return newInterface;*/
       using Helper_t = RDFInternal::ForeachSlotHelper<F>;
       using Action_t = RDFInternal::RAction<Helper_t, Proxied>;
       loopManager->Book(
-         std::make_shared<Action_t>(Helper_t(std::move(f)), usedColumnNames, *fProxiedPtr, fCustomColumns));
+         std::make_shared<Action_t>(Helper_t(std::move(f)), usedColumnNames, *fProxiedPtr, newColumns));
       loopManager->Run();
    }
 
@@ -1385,7 +1391,7 @@ return newInterface;*/
       const auto columns = columnName.empty() ? ColumnNames_t() : ColumnNames_t({std::string(columnName)});
       constexpr auto nColumns = ArgTypes::list_size;
 
-      const auto selectedColumnsNames = GetValidatedColumnNames(nColumns, columns);
+      const auto selectedColumnsNames = GetValidatedColumnNames(1, columns);
 
       auto newColumns = fDataSource ? RDFInternal::AddDSColumns(selectedColumnsNames, fCustomColumns, *fDataSource,
                                                                 loopManager->GetNSlots(),
@@ -1498,6 +1504,11 @@ private:
       (*(columns))[std::string(entryColName)] =
          std::make_shared<NewColEntry_t>(entryColName, std::move(entryColGen), *(columnNames), loopManager->GetNSlots(),
                                          RDFInternal::RBookedCustomColumns(columns, columnNames));
+      // Declare return type to the interpreter, for future use by jitted actions
+      auto retTypeDeclaration = "namespace __tdf" + std::to_string(loopManager->GetID()) + " { using " +
+                                      entryColName + "_type = ULong64_t; }";
+      gInterpreter->Declare(retTypeDeclaration.c_str());
+
 
       // Slot number column
       const auto slotColName = "tdfslot_";
@@ -1509,6 +1520,12 @@ private:
          std::make_shared<NewColSlot_t>(slotColName, std::move(slotColGen), *(columnNames), loopManager->GetNSlots(),
                                         RDFInternal::RBookedCustomColumns(columns, columnNames));
       fCustomColumns = RDFInternal::RBookedCustomColumns(std::move(columns), std::move(columnNames));
+
+       // Declare return type to the interpreter, for future use by jitted actions
+      retTypeDeclaration = "namespace __tdf" + std::to_string(loopManager->GetID()) + " { using " +
+                                      slotColName + "_type = unsigned int; }";
+      gInterpreter->Declare(retTypeDeclaration.c_str());
+
    }
 
    ColumnNames_t ConvertRegexToColumns(std::string_view columnNameRegexp, std::string_view callerName)

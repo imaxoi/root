@@ -554,10 +554,6 @@ class RCustomColumn final : public RCustomColumnBase {
 
    std::vector<RDFInternal::RDFValueTuple_t<ColumnTypes_t>> fValues;
 
-   // The initialization and cleaning are called by the nodes that own this columns. There could be more than one.
-   bool fIsInitialized = false;
-   bool fIsCleaned = false;
-
 public:
    RCustomColumn(std::string_view name, F &&expression, const ColumnNames_t &bl, unsigned int nSlots,
                  RDFInternal::RBookedCustomColumns customColumns, bool isDSColumn = false)
@@ -571,10 +567,8 @@ public:
 
    void InitSlot(TTreeReader *r, unsigned int slot) final
    {
-      if (fIsInitialized)
-         return;
+      //TODO: This is called multiple times. Wasteful.
       RDFInternal::InitRDFValues(slot, fValues[slot], r, fBranches, fCustomColumns, TypeInd_t());
-      fIsInitialized = true;
    }
 
    void *GetValuePtr(unsigned int slot) final { return static_cast<void *>(&fLastResults[slot]); }
@@ -623,10 +617,8 @@ public:
 
    void ClearValueReaders(unsigned int slot) final
    {
-      if (fIsCleaned)
-         return;
+      //TODO: This is called multiple times. Wasteful.
       RDFInternal::ResetRDFValueTuple(fValues[slot], TypeInd_t());
-      fIsCleaned = true;
    }
 };
 

@@ -79,6 +79,7 @@ template class TColumnValue<std::vector<ULong64_t>>;
 } // namespace Internal
 } // namespace ROOT
 
+//- TODO: fLastCheckedEntry(std::vector<Long64_t>(fNSlots, -1)) riumettilo in initNode, chiamalo da fuori e ricordati di rimettere a false il flag di inizializzazione nel cleanup.
 RCustomColumnBase::RCustomColumnBase(std::string_view name, const unsigned int nSlots, const bool isDSColumn,
                                      RDFInternal::RBookedCustomColumns customColumns)
    : fName(name), fNSlots(nSlots), fIsDataSourceColumn(isDSColumn),
@@ -502,6 +503,13 @@ void RLoopManager::InitNodeSlots(TTreeReader *r, unsigned int slot)
       ptr->InitSlot(r, slot);
    for (auto &ptr : fBookedFilters)
       ptr->InitSlot(r, slot);
+
+   /* //-
+   per ogni azione
+      defalgga la colonna
+   per ogni filtro
+      deflagga la colonna
+   */
    for (auto &callback : fCallbacksOnce)
       callback(slot);
 }

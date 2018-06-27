@@ -229,7 +229,7 @@ void BookFilterJit(RJittedFilter *jittedFilter, void *prevNode, std::string_view
                    const RDFInternal::RBookedCustomColumns &customCols, TTree *tree, RDataSource *ds,
                    unsigned int namespaceID);
 
-void BookDefineJit(std::string_view name, std::string_view expression, RLoopManager &lm, RDataSource *ds,
+std::shared_ptr<ROOT::Detail::RDF::RJittedCustomColumn> BookDefineJit(std::string_view name, std::string_view expression, RLoopManager &lm, RDataSource *ds,
                    RDFInternal::RBookedCustomColumns customCols);
 
 std::string JitBuildAndBook(const ColumnNames_t &bl, const std::string &prevNodeTypename, void *prevNode,
@@ -338,19 +338,20 @@ void JitFilterHelper(F &&f, const ColumnNames_t &cols, std::string_view name, RJ
 
 template <typename F>
 void JitDefineHelper(F &&f, const ColumnNames_t &cols, std::string_view name, RLoopManager *lm,
-                     RJittedCustomColumn &jittedCustomCol)
+                     RJittedCustomColumn &jittedCustomCol, RDFInternal::RBookedCustomColumns *customColumns)
 {
-   /* using NewCol_t = RCustomColumn<F, CustomColExtraArgs::None>;
+    using NewCol_t = RCustomColumn<F, CustomColExtraArgs::None>;
     using ColTypes_t = typename TTraits::CallableTraits<F>::arg_types;
     constexpr auto nColumns = ColTypes_t::list_size;
 
     auto ds = lm->GetDataSource();
-    auto newColumns = ds ? RDFInternal::AddDSColumns(cols, *customColumns, *ds, lm.GetNSlots(),
-                                                     std::make_index_sequence<nColumns>(), ColTypes_t())
-                         : *customColumns;
-    if (ds)
-       RDFInternal::DefineDataSourceColumns(cols, *lm, *ds, std::make_index_sequence<nColumns>(), ColTypes_t());
-    jittedCustomCol.SetCustomColumn(std::make_unique<NewCol_t>(name, std::move(f), cols, lm));*/
+    auto newColumns = ds ? RDFInternal::AddDSColumns(cols, *customColumns, *ds, lm->GetNSlots(),
+                                                    std::make_index_sequence<nColumns>(), ColTypes_t())
+                        : *customColumns;
+   delete customColumns;
+
+    jittedCustomCol.SetCustomColumn(std::make_unique<NewCol_t>(name, std::move(f), cols, lm->GetNSlots(),
+                                    newColumns));
 }
 
 /// Convenience function invoked by jitted code to build action nodes at runtime

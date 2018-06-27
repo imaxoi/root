@@ -553,20 +553,21 @@ void BookFilterJit(RJittedFilter *jittedFilter, void *prevNode, std::string_view
 }
 
 // Jit a Define call
-void BookDefineJit(std::string_view name, std::string_view expression, RLoopManager &lm, RDataSource *ds,
+std::shared_ptr<ROOT::Detail::RDF::RJittedCustomColumn> BookDefineJit(std::string_view name, std::string_view expression, RLoopManager &lm, RDataSource *ds,
                    RDFInternal::RBookedCustomColumns customCols)
 {
-   /*const auto &aliasMap = lm.GetAliasMap();
+   const auto &aliasMap = lm.GetAliasMap();
    auto *const tree = lm.GetTree();
    const auto branches = tree ? RDFInternal::GetBranchNames(*tree) : ColumnNames_t();
    const auto namespaceID = lm.GetID();
    const auto &dsColumns = ds ? ds->GetColumnNames() : ColumnNames_t{};
 
    // not const because `ColumnTypesAsStrings` might delete redundant matches and replace variable names
-   auto usedBranches = FindUsedColumnNames(expression, branches, *(customCols.fCustomColumnsNames), dsColumns,
-   aliasMap); auto varNames = ReplaceDots(usedBranches); auto dotlessExpr = std::string(expression); const auto
-   usedColTypes = ColumnTypesAsString(usedBranches, varNames, aliasMap, *(customCols.fCustomColumnsNames), tree, ds,
-   dotlessExpr, namespaceID);
+   auto usedBranches = FindUsedColumnNames(expression, branches, *(customCols.fCustomColumnsNames), dsColumns, aliasMap);
+   auto varNames = ReplaceDots(usedBranches);
+   auto dotlessExpr = std::string(expression);
+   const auto usedColTypes =
+      ColumnTypesAsString(usedBranches, varNames, aliasMap, *(customCols.fCustomColumnsNames), tree, ds, dotlessExpr, namespaceID);
 
    TRegexp re("[^a-zA-Z0-9_]return[^a-zA-Z0-9_]");
    Ssiz_t matchedLen;
@@ -574,11 +575,14 @@ void BookDefineJit(std::string_view name, std::string_view expression, RLoopMana
 
    TryToJitExpression(dotlessExpr, varNames, usedColTypes, hasReturnStmt);
 
-   const auto jittedCustomColumn = std::make_shared<RJittedCustomColumn>(lm, name);
+   const auto jittedCustomColumn = std::make_shared<RJittedCustomColumn>(name, customCols, lm.GetNSlots());
 
-   const auto definelambda = BuildLambdaString(dotlessExpr, varNames, usedColTypes, hasReturnStmt);
+  const auto definelambda = BuildLambdaString(dotlessExpr, varNames, usedColTypes, hasReturnStmt);
    const auto lambdaName = "eval_" + std::string(name);
-   const auto ns = "__tdf" + std::to_string(namespaceID);
+const auto ns = "__tdf" + std::to_string(namespaceID);
+
+   auto customColumnsCopy = new RDFInternal::RBookedCustomColumns(customCols);
+   auto customColumnsAddr = PrettyPrintAddr(customColumnsCopy);
 
    // Declare the lambda variable and an alias for the type of the defined column in namespace __tdf
    // This assumes that a given variable is Define'd once per RDataFrame -- we might want to relax this requirement
@@ -600,11 +604,13 @@ void BookDefineJit(std::string_view name, std::string_view expression, RLoopMana
       defineInvocation.seekp(-2, defineInvocation.cur); // remove the last ",
    defineInvocation << "}, \"" << name << "\", reinterpret_cast<ROOT::Detail::RDF::RLoopManager*>("
                     << PrettyPrintAddr(&lm) << "), *reinterpret_cast<ROOT::Detail::RDF::RJittedCustomColumn*>("
-                    << PrettyPrintAddr(jittedCustomColumn.get()) << "));";
+                    << PrettyPrintAddr(jittedCustomColumn.get()) << "),"
+                    << "reinterpret_cast<ROOT::Internal::RDF::RBookedCustomColumns*>(" << customColumnsAddr << ")"
+                    << ");";
 
-   lm.AddCustomColumnName(name);
-   lm.Book(jittedCustomColumn);
-   lm.ToJit(defineInvocation.str());*/
+   lm.ToJit(defineInvocation.str());
+
+   return jittedCustomColumn;
 }
 
 // Jit and call something equivalent to "this->BuildAndBook<BranchTypes...>(params...)"
