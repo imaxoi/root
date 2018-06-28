@@ -48,7 +48,9 @@ namespace ROOT {
 namespace Internal {
 namespace RDF {
 
-RActionBase::RActionBase(RLoopManager *implPtr, const unsigned int nSlots) : fLoopManager(implPtr), fNSlots(nSlots)
+RActionBase::RActionBase(RLoopManager *implPtr, const unsigned int nSlots,
+                         RDFInternal::RBookedCustomColumns customColumns)
+   : fLoopManager(implPtr), fNSlots(nSlots), fCustomColumns(customColumns)
 {
 }
 
@@ -73,13 +75,17 @@ template class TColumnValue<std::vector<double>>;
 template class TColumnValue<std::vector<Long64_t>>;
 template class TColumnValue<std::vector<ULong64_t>>;
 #endif
-} // end NS RDF
-} // end NS Internal
-} // end NS ROOT
+} // namespace RDF
+} // namespace Internal
+} // namespace ROOT
 
-RCustomColumnBase::RCustomColumnBase(RLoopManager *lm, std::string_view name, const unsigned int nSlots,
-                                     const bool isDSColumn)
-   : fLoopManager(lm), fName(name), fNSlots(nSlots), fIsDataSourceColumn(isDSColumn) {}
+//- TODO: fLastCheckedEntry(std::vector<Long64_t>(fNSlots, -1)) riumettilo in initNode, chiamalo da fuori e ricordati di rimettere a false il flag di inizializzazione nel cleanup.
+RCustomColumnBase::RCustomColumnBase(std::string_view name, const unsigned int nSlots, const bool isDSColumn,
+                                     RDFInternal::RBookedCustomColumns customColumns)
+   : fName(name), fNSlots(nSlots), fIsDataSourceColumn(isDSColumn),
+     fLastCheckedEntry(std::vector<Long64_t>(fNSlots, -1)), fCustomColumns(customColumns)
+{
+}
 
 // pin vtable. Work around cling JIT issue.
 RCustomColumnBase::~RCustomColumnBase() = default;
@@ -89,10 +95,7 @@ std::string RCustomColumnBase::GetName() const
    return fName;
 }
 
-void RCustomColumnBase::InitNode()
-{
-   fLastCheckedEntry = std::vector<Long64_t>(fNSlots, -1);
-}
+void RCustomColumnBase::InitNode() {}
 
 void RJittedCustomColumn::InitSlot(TTreeReader *r, unsigned int slot)
 {
@@ -130,8 +133,10 @@ void RJittedCustomColumn::InitNode()
    fConcreteCustomColumn->InitNode();
 }
 
-RFilterBase::RFilterBase(RLoopManager *implPtr, std::string_view name, const unsigned int nSlots)
-   : fLoopManager(implPtr), fLastResult(nSlots), fAccepted(nSlots), fRejected(nSlots), fName(name), fNSlots(nSlots)
+RFilterBase::RFilterBase(RLoopManager *implPtr, std::string_view name, const unsigned int nSlots,
+                         RDFInternal::RBookedCustomColumns customColumns)
+   : fLoopManager(implPtr), fLastResult(nSlots), fAccepted(nSlots), fRejected(nSlots), fName(name), fNSlots(nSlots),
+     fCustomColumns(customColumns)
 {
 }
 
@@ -229,6 +234,15 @@ void RJittedFilter::ResetReportCount()
 void RJittedFilter::ClearValueReaders(unsigned int slot)
 {
    R__ASSERT(fConcreteFilter != nullptr);
+   fConcreteFilter->ClearValueReaders(slot);
+}
+
+void RJittedFilter::ClearTask(unsigned int slot)
+{
+   R__ASSERT(fConcreteFilter != nullptr);
+   for (auto &column : *(fCustomColumns.fCustomColumns)) {
+      column.second->ClearValueReaders(slot);
+   }
    fConcreteFilter->ClearValueReaders(slot);
 }
 
@@ -484,12 +498,18 @@ void RLoopManager::RunAndCheckFilters(unsigned int slot, Long64_t entry)
 void RLoopManager::InitNodeSlots(TTreeReader *r, unsigned int slot)
 {
    // booked branches must be initialized first because other nodes might need to point to the values they encapsulate
-   for (auto &bookedBranch : fBookedCustomColumns)
-      bookedBranch.second->InitSlot(r, slot);
+
    for (auto &ptr : fBookedActions)
       ptr->InitSlot(r, slot);
    for (auto &ptr : fBookedFilters)
       ptr->InitSlot(r, slot);
+
+   /* //-
+   per ogni azione
+      defalgga la colonna
+   per ogni filtro
+      deflagga la colonna
+   */
    for (auto &callback : fCallbacksOnce)
       callback(slot);
 }
@@ -503,8 +523,6 @@ void RLoopManager::InitNodes()
    EvalChildrenCounts();
    for (auto &filter : fBookedFilters)
       filter->InitNode();
-   for (auto &customColumn : fBookedCustomColumns)
-      customColumn.second->InitNode();
    for (auto &range : fBookedRanges)
       range->InitNode();
    for (auto &ptr : fBookedActions)
@@ -543,9 +561,7 @@ void RLoopManager::CleanUpTask(unsigned int slot)
    for (auto &ptr : fBookedActions)
       ptr->FinalizeSlot(slot);
    for (auto &ptr : fBookedFilters)
-      ptr->ClearValueReaders(slot);
-   for (auto &pair : fBookedCustomColumns)
-      pair.second->ClearValueReaders(slot);
+      ptr->ClearTask(slot);
 }
 
 /// Jit all actions that required runtime column type inference, and clean the `fToJit` member variable.
@@ -676,8 +692,8 @@ void RLoopManager::RegisterCallback(ULong64_t everyNEvents, std::function<void(u
 }
 
 RRangeBase::RRangeBase(RLoopManager *implPtr, unsigned int start, unsigned int stop, unsigned int stride,
-                       const unsigned int nSlots)
-   : fLoopManager(implPtr), fStart(start), fStop(stop), fStride(stride), fNSlots(nSlots)
+                       const unsigned int nSlots, RDFInternal::RBookedCustomColumns customColumns)
+   : fLoopManager(implPtr), fStart(start), fStop(stop), fStride(stride), fNSlots(nSlots), fCustomColumns(customColumns)
 {
 }
 
