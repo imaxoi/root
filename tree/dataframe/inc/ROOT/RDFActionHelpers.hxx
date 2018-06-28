@@ -50,19 +50,18 @@ namespace Detail {
 namespace RDF {
 
 template <typename Helper>
-class RActionImpl {
+class RActionImpl
+{
 public:
    // call Helper::FinalizeTask if present, do nothing otherwise
    template <typename T = Helper>
    auto CallFinalizeTask(unsigned int slot) -> decltype(&T::FinalizeTask, void())
    {
-      static_cast<Helper *>(this)->FinalizeTask(slot);
+      static_cast<Helper*>(this)->FinalizeTask(slot);
    }
 
    template <typename... Args>
-   void CallFinalizeTask(unsigned int, Args...)
-   {
-   }
+   void CallFinalizeTask(unsigned int, Args...) {}
 };
 
 } // namespace RDF
@@ -97,13 +96,9 @@ public:
       fCallable(slot, std::forward<Args>(args)...);
    }
 
-   void Initialize()
-   { /* noop */
-   }
+   void Initialize() { /* noop */}
 
-   void Finalize()
-   { /* noop */
-   }
+   void Finalize() { /* noop */}
 };
 
 class CountHelper : public RActionImpl<CountHelper> {
@@ -117,9 +112,7 @@ public:
    CountHelper(const CountHelper &) = delete;
    void InitTask(TTreeReader *, unsigned int) {}
    void Exec(unsigned int slot);
-   void Initialize()
-   { /* noop */
-   }
+   void Initialize() { /* noop */}
    void Finalize();
    ULong64_t &PartialUpdate(unsigned int slot);
 };
@@ -142,9 +135,7 @@ public:
    ReportHelper(const ReportHelper &) = delete;
    void InitTask(TTreeReader *, unsigned int) {}
    void Exec(unsigned int /* slot */) {}
-   void Initialize()
-   { /* noop */
-   }
+   void Initialize() { /* noop */}
    void Finalize()
    {
       // We need the weak_ptr in order to avoid crashes at tear down
@@ -207,9 +198,7 @@ public:
 
    Hist_t &PartialUpdate(unsigned int);
 
-   void Initialize()
-   { /* noop */
-   }
+   void Initialize() { /* noop */}
 
    void Finalize();
 };
@@ -327,9 +316,7 @@ public:
       }
    }
 
-   void Initialize()
-   { /* noop */
-   }
+   void Initialize() { /* noop */}
 
    void Finalize() { fTo->Merge(); }
 
@@ -363,9 +350,7 @@ public:
 
    void Exec(unsigned int slot, T &v) { fColls[slot]->emplace_back(v); }
 
-   void Initialize()
-   { /* noop */
-   }
+   void Initialize() { /* noop */}
 
    void Finalize()
    {
@@ -405,9 +390,7 @@ public:
 
    void Exec(unsigned int slot, T &v) { fColls[slot]->emplace_back(v); }
 
-   void Initialize()
-   { /* noop */
-   }
+   void Initialize() { /* noop */}
 
    // This is optimised to treat vectors
    void Finalize()
@@ -447,9 +430,7 @@ public:
 
    void Exec(unsigned int slot, RVec<RealT_t> av) { fColls[slot]->emplace_back(av.begin(), av.end()); }
 
-   void Initialize()
-   { /* noop */
-   }
+   void Initialize() { /* noop */}
 
    void Finalize()
    {
@@ -466,7 +447,7 @@ public:
 // Case 4.: The column is an RVec, the collection is a vector
 // Optimisations, transformations from RVecs to vectors
 template <typename RealT_t>
-class TakeHelper<RealT_t, RVec<RealT_t>, std::vector<RealT_t>>
+   class TakeHelper<RealT_t, RVec<RealT_t>, std::vector<RealT_t>>
    : public RActionImpl<TakeHelper<RealT_t, RVec<RealT_t>, std::vector<RealT_t>>> {
    std::vector<std::shared_ptr<std::vector<std::vector<RealT_t>>>> fColls;
 
@@ -488,9 +469,7 @@ public:
 
    void Exec(unsigned int slot, RVec<RealT_t> av) { fColls[slot]->emplace_back(av.begin(), av.end()); }
 
-   void Initialize()
-   { /* noop */
-   }
+   void Initialize() { /* noop */}
 
    // This is optimised to treat vectors
    void Finalize()
@@ -530,9 +509,7 @@ public:
          fMins[slot] = std::min(v, fMins[slot]);
    }
 
-   void Initialize()
-   { /* noop */
-   }
+   void Initialize() { /* noop */}
 
    void Finalize()
    {
@@ -574,9 +551,7 @@ public:
          fMaxs[slot] = std::max((ResultType)v, fMaxs[slot]);
    }
 
-   void Initialize()
-   { /* noop */
-   }
+   void Initialize() { /* noop */}
 
    void Finalize()
    {
@@ -619,9 +594,7 @@ public:
          fSums[slot] += static_cast<ResultType>(v);
    }
 
-   void Initialize()
-   { /* noop */
-   }
+   void Initialize() { /* noop */}
 
    void Finalize()
    {
@@ -654,9 +627,7 @@ public:
       }
    }
 
-   void Initialize()
-   { /* noop */
-   }
+   void Initialize() { /* noop */}
 
    void Finalize();
 
@@ -679,8 +650,7 @@ void SetBranchesHelper(TTree * /*inputTree*/, TTree &outputTree, const std::stri
 
 /// Helper function for SnapshotHelper and SnapshotHelperMT. It creates new branches for the output TTree of a Snapshot.
 /// This overload is called for columns of type `RVec<T>`. For RDF, these can represent:
-/// 1. c-style arrays in ROOT files, so we are sure that there are input trees to which we can ask the correct branch
-/// title
+/// 1. c-style arrays in ROOT files, so we are sure that there are input trees to which we can ask the correct branch title
 /// 2. RVecs coming from a custom column or a source
 /// 3. vectors coming from ROOT files
 template <typename T>
@@ -790,6 +760,7 @@ public:
       } else {
          Warning("Snapshot", "A lazy Snapshot action was booked but never triggered.");
       }
+
    }
 };
 
@@ -799,7 +770,7 @@ class SnapshotHelperMT : public RActionImpl<SnapshotHelperMT<BranchTypes...>> {
    const unsigned int fNSlots;
    std::unique_ptr<ROOT::Experimental::TBufferMerger> fMerger; // must use a ptr because TBufferMerger is not movable
    std::vector<std::shared_ptr<ROOT::Experimental::TBufferMergerFile>> fOutputFiles;
-   std::vector<std::stack<std::unique_ptr<TTree>>> fOutputTrees;
+   std::vector<std::stack<std::unique_ptr<TTree>>> fOutputTrees;                       
    std::vector<int> fIsFirstEvent;        // vector<bool> is evil
    const std::string fFileName;           // name of the output file name
    const std::string fDirName;            // name of TFile subdirectory in which output must be written (possibly empty)
@@ -907,6 +878,7 @@ public:
          Warning("Snapshot", "A lazy Snapshot action was booked but never triggered.");
       }
    }
+
 };
 
 template <typename Acc, typename Merge, typename R, typename T, typename U,
@@ -940,9 +912,7 @@ public:
       fAggregate(fAggregators[slot], value);
    }
 
-   void Initialize()
-   { /* noop */
-   }
+   void Initialize() { /* noop */}
 
    template <typename MergeRet = typename CallableTraits<Merge>::ret_type,
              bool MergeAll = std::is_same<void, MergeRet>::value>
@@ -963,9 +933,9 @@ public:
    U &PartialUpdate(unsigned int slot) { return fAggregators[slot]; }
 };
 
-} // namespace RDF
-} // namespace Internal
-} // namespace ROOT
+} // end of NS RDF
+} // end of NS Internal
+} // end of NS ROOT
 
 /// \endcond
 

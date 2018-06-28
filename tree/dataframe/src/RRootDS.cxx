@@ -161,6 +161,6 @@ RDataFrame MakeRootDataFrame(std::string_view treeName, std::string_view fileNam
    return tdf;
 }
 
-} // namespace RDF
+} // ns RDF
 
-} // namespace ROOT
+} // ns ROOT

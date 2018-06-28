@@ -273,6 +273,6 @@ std::vector<std::string> ReplaceDotWithUnderscore(const std::vector<std::string>
    return newColNames;
 }
 
-} // namespace RDF
-} // namespace Internal
-} // namespace ROOT
+} // end NS RDF
+} // end NS Internal
+} // end NS ROOT

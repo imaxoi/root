@@ -15,7 +15,7 @@ namespace ROOT {
 
 using TDataFrame = ROOT::RDataFrame;
 
-} // namespace ROOT
+} // End NS ROOT
 
 #warning The TDataFrame.hxx header has been replaced by RDataFrame.hxx
 

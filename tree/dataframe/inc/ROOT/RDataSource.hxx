@@ -54,8 +54,9 @@ public:
    ~TTypedPointerHolder() { delete static_cast<T *>(fPointer); }
 };
 
-} // namespace TDS
-} // namespace Internal
+} // ns TDS
+} // ns Internal
+
 
 namespace RDF {
 
@@ -187,8 +188,8 @@ protected:
    virtual Record_t GetColumnReadersImpl(std::string_view name, const std::type_info &) = 0;
 };
 
-} // namespace RDF
+} // ns RDF
 
-} // namespace ROOT
+} // ns ROOT
 
 #endif // ROOT_TDATASOURCE

@@ -16,9 +16,9 @@ namespace ROOT {
 namespace RDF {
 template <typename T>
 using TResultProxy = RResultPtr<T>;
-} // namespace RDF
+} // End NS RDF
 
-} // namespace ROOT
+} // End NS ROOT
 
 #warning The TResultProxy.hxx header has been replaced by RResultPtr.hxx
 

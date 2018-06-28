@@ -22,9 +22,13 @@ std::vector<void *> RTrivialDS::GetColumnReadersImpl(std::string_view, const std
    return ret;
 }
 
-RTrivialDS::RTrivialDS(ULong64_t size, bool skipEvenEntries) : fSize(size), fSkipEvenEntries(skipEvenEntries) {}
+RTrivialDS::RTrivialDS(ULong64_t size, bool skipEvenEntries) : fSize(size), fSkipEvenEntries(skipEvenEntries)
+{
+}
 
-RTrivialDS::~RTrivialDS() {}
+RTrivialDS::~RTrivialDS()
+{
+}
 
 const std::vector<std::string> &RTrivialDS::GetColumnNames() const
 {
@@ -86,6 +90,6 @@ RDataFrame MakeTrivialDataFrame(ULong64_t size, bool skipEvenEntries)
    return tdf;
 }
 
-} // namespace RDF
+} // ns RDF
 
-} // namespace ROOT
+} // ns ROOT

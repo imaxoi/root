@@ -53,7 +53,7 @@ public:
    RDataFrame(std::unique_ptr<RDataSource>, const ColumnNames_t &defaultBranches = {});
 };
 
-} // namespace ROOT
+} // end NS ROOT
 
 /// Print a RDataFrame at the prompt
 namespace cling {

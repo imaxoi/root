@@ -153,8 +153,8 @@ struct TProfile2DModel {
    std::shared_ptr<::TProfile2D> GetProfile() const;
 };
 
-} // namespace RDF
+} // ns RDF
 
-} // namespace ROOT
+} // ns ROOT
 
 #endif // ROOT_RDFHISTOMODELS

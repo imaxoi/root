@@ -43,8 +43,8 @@ public:
 
 RDataFrame MakeTrivialDataFrame(ULong64_t size, bool skipEvenEntries = false);
 
-} // namespace RDF
+} // ns RDF
 
-} // namespace ROOT
+} // ns ROOT
 
 #endif
