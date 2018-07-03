@@ -679,13 +679,6 @@ thread-safety, see [here](#generic-actions).
 // clang-format on
 
 namespace ROOT {
-
-namespace Detail {
-namespace RDF {
-class RCustomColumnBase;
-}
-} // namespace Detail
-
 namespace RDFInternal = ROOT::Internal::RDF;
 
 ////////////////////////////////////////////////////////////////////////////

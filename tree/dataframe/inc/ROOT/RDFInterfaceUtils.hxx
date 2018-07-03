@@ -290,9 +290,7 @@ void AddDSColumnsHelper(std::string_view name, RDFInternal::RBookedCustomColumns
    currentCols.AddColumn(newCol, name);
 }
 
-// Take list of column names that must be defined, current map of custom columns, current list of defined column names,
-// and return a pair of new map of custom columns (with the new datasource columns added to it) and new list of defined
-// column names.
+/// Take list of column names that must be defined, current map of custom columns, current list of defined column names, and return a new map of custom columns (with the new datasource columns added to it)
 template <typename... ColumnTypes, std::size_t... S>
 RDFInternal::RBookedCustomColumns
 AddDSColumns(const std::vector<std::string> &requiredCols, const RDFInternal::RBookedCustomColumns &currentCols,
@@ -333,6 +331,7 @@ void JitFilterHelper(F &&f, const ColumnNames_t &cols, std::string_view name, RJ
                                                     std::make_index_sequence<nColumns>(), ColTypes_t())
                         : *customColumns;
 
+   // customColumns points to the columns structure in the heap, created before the jitted call so that the jitter can share data after it has lazily compiled the code. Here the data has been used and the memory can be freed.
    delete customColumns;
 
    auto filterPtr = std::make_unique<F_t>(std::forward<F>(f), cols, *prevNode, newColumns, name);
@@ -352,6 +351,8 @@ void JitDefineHelper(F &&f, const ColumnNames_t &cols, std::string_view name, RL
     auto newColumns = ds ? RDFInternal::AddDSColumns(cols, *customColumns, *ds, lm->GetNSlots(),
                                                     std::make_index_sequence<nColumns>(), ColTypes_t())
                         : *customColumns;
+
+   // customColumns points to the columns structure in the heap, created before the jitted call so that the jitter can share data after it has lazily compiled the code. Here the data has been used and the memory can be freed.
    delete customColumns;
 
     jittedCustomCol.SetCustomColumn(std::make_unique<NewCol_t>(name, std::move(f), cols, lm->GetNSlots(),
@@ -375,6 +376,7 @@ void CallBuildAndBook(PrevNodeType &prevNode, const ColumnNames_t &bl, const uns
                                                     std::make_index_sequence<nColumns>(), ColTypes_t())
                         : *customColumns;
 
+   // customColumns points to the columns structure in the heap, created before the jitted call so that the jitter can share data after it has lazily compiled the code. Here the data has been used and the memory can be freed.
    delete customColumns;
 
    RActionBase *actionPtr =

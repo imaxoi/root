@@ -412,10 +412,10 @@ protected:
                                /// event loop.
    const unsigned int fNSlots; ///< Number of thread slots used by this node.
 
-   RDFInternal::RBookedCustomColumns fCustomColumns;
+   RBookedCustomColumns fCustomColumns;
 
 public:
-   RActionBase(RLoopManager *implPtr, const unsigned int nSlots, RDFInternal::RBookedCustomColumns customColumns);
+   RActionBase(RLoopManager *implPtr, const unsigned int nSlots, RBookedCustomColumns customColumns);
 
    RActionBase(const RActionBase &) = delete;
    RActionBase &operator=(const RActionBase &) = delete;
@@ -442,7 +442,7 @@ class RAction final : public RActionBase {
    std::vector<RDFValueTuple_t<ColumnTypes_t>> fValues;
 
 public:
-   RAction(Helper &&h, const ColumnNames_t &bl, PrevDataFrame &pd, RDFInternal::RBookedCustomColumns customColumns)
+   RAction(Helper &&h, const ColumnNames_t &bl, PrevDataFrame &pd, RBookedCustomColumns customColumns)
       : RActionBase(pd.GetLoopManagerUnchecked(), pd.GetLoopManagerUnchecked()->GetNSlots(), customColumns),
         fHelper(std::move(h)), fBranches(bl), fPrevData(pd), fValues(fNSlots)
    {
