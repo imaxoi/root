@@ -86,8 +86,6 @@ class RInterface {
    using ColumnNames_t = RDFDetail::ColumnNames_t;
    using RFilterBase = RDFDetail::RFilterBase;
    using RRangeBase = RDFDetail::RRangeBase;
-   using RCustomColumnBase = RDFDetail::RCustomColumnBase;
-   using RCustomColumnBasePtr_t = std::shared_ptr<RCustomColumnBase>;
    using RLoopManager = RDFDetail::RLoopManager;
    friend std::string cling::printValue(::ROOT::RDataFrame *tdf); // For a nice printing at the prompt
    template <typename T, typename W>
@@ -324,8 +322,6 @@ public:
    /// Refer to the first overload of this method for the full documentation.
    RInterface<Proxied, DS_t> Define(std::string_view name, std::string_view expression)
    {
-      using RCustomColumnBasePtrMap_t = std::map<std::string, std::shared_ptr<RCustomColumnBase>>;
-
       auto loopManager = GetLoopManager();
       fCustomColumns.CheckCustomColumn(name, loopManager->GetTree(),
                                      fDataSource ? fDataSource->GetColumnNames() : ColumnNames_t{});
@@ -350,7 +346,6 @@ public:
    /// Aliasing an alias is supported.
    RInterface<Proxied, DS_t> Alias(std::string_view alias, std::string_view columnName)
    {
-      using RCustomColumnBasePtrMap_t = std::map<std::string, std::shared_ptr<RCustomColumnBase>>;
       // The symmetry with Define is clear. We want to:
       // - Create globally the alias and return this very node, unchanged
       // - Make aliases accessible based on chains and not globally
@@ -408,7 +403,6 @@ public:
                                                  const ColumnNames_t &columnList,
                                                  const RSnapshotOptions &options = RSnapshotOptions())
    {
-      using RCustomColumnBasePtrMap_t = std::map<std::string, std::shared_ptr<RCustomColumnBase>>;
       auto df = GetLoopManager();
 
       // Early return: if the list of columns is empty, just return an empty RDF
@@ -417,8 +411,7 @@ public:
          auto nEntries = *this->Count();
          auto snapshotRDF = std::make_shared<RInterface<RLoopManager>>(
             std::make_shared<RLoopManager>(nEntries),
-            RDFInternal::RBookedCustomColumns(std::make_shared<RCustomColumnBasePtrMap_t>(),
-                                              std::make_shared<ColumnNames_t>()));
+            RDFInternal::RBookedCustomColumns());
          return MakeResultPtr(snapshotRDF, df, nullptr);
       }
       auto tree = df->GetTree();
@@ -522,15 +515,13 @@ public:
    /// transformations requesting it.
    RInterface<RLoopManager> Cache(const ColumnNames_t &columnList)
    {
-      using RCustomColumnBasePtrMap_t = std::map<std::string, std::shared_ptr<RCustomColumnBase>>;
       // Early return: if the list of columns is empty, just return an empty RDF
       // If we proceed, the jitted call will not compile!
       if (columnList.empty()) {
          auto nEntries = *this->Count();
          RInterface<RLoopManager> emptyRDF(
             std::make_shared<RLoopManager>(nEntries),
-            RDFInternal::RBookedCustomColumns(std::make_shared<RCustomColumnBasePtrMap_t>(),
-                                              std::make_shared<ColumnNames_t>()));
+            RDFInternal::RBookedCustomColumns());
          return emptyRDF;
       }
 
@@ -1501,8 +1492,6 @@ public:
 private:
    void AddDefaultColumns()
    {
-      using RCustomColumnBasePtrMap_t = std::map<std::string, std::shared_ptr<RCustomColumnBase>>;
-
       auto loopManager = GetLoopManager();
 
       RDFInternal::RBookedCustomColumns newCols;
@@ -1663,8 +1652,6 @@ private:
    typename std::enable_if<std::is_default_constructible<RetType>::value, RInterface<Proxied, DS_t>>::type
    DefineImpl(std::string_view name, F &&expression, const ColumnNames_t &columns)
    {
-      using RCustomColumnBasePtrMap_t = std::map<std::string, std::shared_ptr<RCustomColumnBase>>;
-
       auto loopManager = GetLoopManager();
       fCustomColumns.CheckCustomColumn(name, loopManager->GetTree(),
                                      fDataSource ? fDataSource->GetColumnNames() : ColumnNames_t{});
@@ -1740,8 +1727,6 @@ private:
    {
       RDFInternal::CheckTypesAndPars(sizeof...(ColumnTypes), columnList.size());
 
-      using RCustomColumnBasePtrMap_t = std::map<std::string, std::shared_ptr<RCustomColumnBase>>;
-
       auto lm = GetLoopManager();
       const auto validCols = GetValidatedColumnNames(columnList.size(), columnList);
 
@@ -1789,8 +1774,7 @@ private:
       // See https://sft.its.cern.ch/jira/browse/ROOT-9236 for more detail.
       auto rlm_ptr = std::make_shared<RLoopManager>(nullptr, validCols);
       auto snapshotRDF = std::make_shared<RInterface<RLoopManager>>(
-         rlm_ptr, RDFInternal::RBookedCustomColumns(std::make_shared<RCustomColumnBasePtrMap_t>(),
-                                                    std::make_shared<ColumnNames_t>()));
+         rlm_ptr, RDFInternal::RBookedCustomColumns());
       auto chain = std::make_shared<TChain>(fullTreename.c_str());
       chain->Add(std::string(filename).c_str());
       snapshotRDF->fProxiedPtr->SetTree(chain);
@@ -1807,7 +1791,6 @@ private:
    template <typename... BranchTypes, std::size_t... S>
    RInterface<RLoopManager> CacheImpl(const ColumnNames_t &columnList, std::index_sequence<S...> s)
    {
-      using RCustomColumnBasePtrMap_t = std::map<std::string, std::shared_ptr<RCustomColumnBase>>;
       // Check at compile time that the columns types are copy constructible
       constexpr bool areCopyConstructible =
          RDFInternal::TEvalAnd<std::is_copy_constructible<BranchTypes>::value...>::value;
@@ -1827,8 +1810,7 @@ private:
 
       RInterface<RLoopManager> cachedRDF(
          std::make_shared<RLoopManager>(std::move(ds), columnList),
-         RDFInternal::RBookedCustomColumns(std::make_shared<RCustomColumnBasePtrMap_t>(),
-                                           std::make_shared<ColumnNames_t>()));
+         RDFInternal::RBookedCustomColumns());
       return cachedRDF;
    }
 

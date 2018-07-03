@@ -654,12 +654,6 @@ void RLoopManager::Book(const FilterBasePtr_t &filterPtr)
    }
 }
 
-void RLoopManager::Book(const RCustomColumnBasePtr_t &columnPtr)
-{
-   const auto &name = columnPtr->GetName();
-   fBookedCustomColumns[name] = columnPtr;
-}
-
 void RLoopManager::Book(const std::shared_ptr<bool> &readinessPtr)
 {
    fResProxyReadiness.emplace_back(readinessPtr);

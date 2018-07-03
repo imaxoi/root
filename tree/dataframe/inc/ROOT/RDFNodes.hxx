@@ -74,7 +74,6 @@ namespace RDFInternal = ROOT::Internal::RDF;
 using ActionBasePtr_t = std::shared_ptr<RDFInternal::RActionBase>;
 using ActionBaseVec_t = std::vector<ActionBasePtr_t>;
 class RCustomColumnBase;
-using RCustomColumnBasePtr_t = std::shared_ptr<RCustomColumnBase>;
 class RFilterBase;
 using FilterBasePtr_t = std::shared_ptr<RFilterBase>;
 using FilterBaseVec_t = std::vector<FilterBasePtr_t>;
@@ -128,8 +127,6 @@ class RLoopManager {
    ActionBaseVec_t fBookedActions;
    FilterBaseVec_t fBookedFilters;
    FilterBaseVec_t fBookedNamedFilters; ///< Contains a subset of fBookedFilters, i.e. only the named filters
-   std::map<std::string, RCustomColumnBasePtr_t> fBookedCustomColumns;
-   ColumnNames_t fCustomColumnNames; ///< Contains names of all custom columns defined in the functional graph.
    RangeBaseVec_t fBookedRanges;
    std::vector<std::shared_ptr<bool>> fResProxyReadiness;
    ::TDirectory *const fDirPtr{nullptr};
@@ -145,7 +142,6 @@ class RLoopManager {
    const ELoopType fLoopType; ///< The kind of event loop that is going to be run (e.g. on ROOT files, on no files)
    std::string fToJit;        ///< string containing all `BuildAndBook` actions that should be jitted before running
    const std::unique_ptr<RDataSource> fDataSource; ///< Owning pointer to a data-source object. Null if no data-source
-   ColumnNames_t fDefinedDataSourceColumns;        ///< List of data-source columns that have been `Define`d so far
    std::map<std::string, std::string> fAliasColumnNameMap; ///< ColumnNameAlias-columnName pairs
    std::vector<TCallback> fCallbacks;                      ///< Registered callbacks
    std::vector<TOneTimeCallback> fCallbacksOnce; ///< Registered callbacks to invoke just once before running the loop
@@ -178,15 +174,12 @@ public:
    void Run();
    RLoopManager *GetLoopManagerUnchecked();
    const ColumnNames_t &GetDefaultColumnNames() const;
-   const ColumnNames_t &GetCustomColumnNames() const { return fCustomColumnNames; };
    TTree *GetTree() const;
-   const std::map<std::string, RCustomColumnBasePtr_t> &GetBookedColumns() const { return fBookedCustomColumns; }
    ::TDirectory *GetDirectory() const;
    ULong64_t GetNEmptyEntries() const { return fNEmptyEntries; }
    RDataSource *GetDataSource() const { return fDataSource.get(); }
    void Book(const ActionBasePtr_t &actionPtr);
    void Book(const FilterBasePtr_t &filterPtr);
-   void Book(const RCustomColumnBasePtr_t &branchPtr);
    void Book(const std::shared_ptr<bool> &branchPtr);
    void Book(const RangeBasePtr_t &rangePtr);
    bool CheckFilters(int, unsigned int);
@@ -199,20 +192,13 @@ public:
    void IncrChildrenCount() { ++fNChildren; }
    void StopProcessing() { ++fNStopsReceived; }
    void ToJit(const std::string &s) { fToJit.append(s); }
-   const ColumnNames_t &GetDefinedDataSourceColumns() const { return fDefinedDataSourceColumns; }
-   // TODO unused, remove
-   void AddDataSourceColumn(std::string_view name) { fDefinedDataSourceColumns.emplace_back(name); }
    void AddColumnAlias(const std::string &alias, const std::string &colName) { fAliasColumnNameMap[alias] = colName; }
-   void AddCustomColumnName(std::string_view name) { fCustomColumnNames.emplace_back(name); }
    const std::map<std::string, std::string> &GetAliasMap() const { return fAliasColumnNameMap; }
    void RegisterCallback(ULong64_t everyNEvents, std::function<void(unsigned int)> &&f);
    unsigned int GetID() const { return fID; }
 };
 
 class RCustomColumnBase {
-   using RCustomColumnBasePtr_t = std::shared_ptr<RCustomColumnBase>;
-   using RcustomColumnBasePtrMap_t = std::map<std::string, RCustomColumnBasePtr_t>;
-
 protected:
    const std::string fName;
    unsigned int fNChildren{0};      ///< number of nodes of the functional graph hanging from this object
@@ -448,8 +434,6 @@ public:
 
 template <typename Helper, typename PrevDataFrame, typename ColumnTypes_t = typename Helper::ColumnTypes_t>
 class RAction final : public RActionBase {
-   using RCustomColumnBasePtr_t = std::shared_ptr<RCustomColumnBase>;
-   using RcustomColumnBasePtrMap_t = std::map<std::string, RCustomColumnBasePtr_t>;
    using TypeInd_t = std::make_index_sequence<ColumnTypes_t::list_size>;
 
    Helper fHelper;
@@ -545,8 +529,6 @@ class RCustomColumn final : public RCustomColumnBase {
    // Avoid instantiating vector<bool> as `operator[]` returns temporaries in that case. Use std::deque instead.
    using ValuesPerSlot_t =
       typename std::conditional<std::is_same<ret_type, bool>::value, std::deque<ret_type>, std::vector<ret_type>>::type;
-   using RCustomColumnBasePtr_t = std::shared_ptr<RCustomColumnBase>;
-   using RcustomColumnBasePtrMap_t = std::map<std::string, RCustomColumnBasePtr_t>;
 
    F fExpression;
    const ColumnNames_t fBranches;
@@ -567,7 +549,7 @@ public:
 
    void InitSlot(TTreeReader *r, unsigned int slot) final
    {
-      //TODO: This is called multiple times. Wasteful.
+       //TODO: Each node calls this method for each column it uses. Multiple nodes may share the same columns, and this would lead to this method being called multiple times.
       RDFInternal::InitRDFValues(slot, fValues[slot], r, fBranches, fCustomColumns, TypeInd_t());
    }
 
@@ -617,15 +599,12 @@ public:
 
    void ClearValueReaders(unsigned int slot) final
    {
-      //TODO: This is called multiple times. Wasteful.
+      //TODO: Each node calls this method for each column it uses. Multiple nodes may share the same columns, and this would lead to this method being called multiple times.
       RDFInternal::ResetRDFValueTuple(fValues[slot], TypeInd_t());
    }
 };
 
 class RFilterBase {
-   using RCustomColumnBasePtr_t = std::shared_ptr<RCustomColumnBase>;
-   using RcustomColumnBasePtrMap_t = std::map<std::string, RCustomColumnBasePtr_t>;
-
 protected:
    RLoopManager *fLoopManager; ///< A raw pointer to the RLoopManager at the root of this functional graph. It is only
                                /// guaranteed to contain a valid address during an event loop.
@@ -704,8 +683,6 @@ public:
 
 template <typename FilterF, typename PrevDataFrame>
 class RFilter final : public RFilterBase {
-   using RCustomColumnBasePtr_t = std::shared_ptr<RCustomColumnBase>;
-   using RcustomColumnBasePtrMap_t = std::map<std::string, RCustomColumnBasePtr_t>;
    using ColumnTypes_t = typename CallableTraits<FilterF>::arg_types;
    using TypeInd_t = std::make_index_sequence<ColumnTypes_t::list_size>;
 
@@ -804,9 +781,6 @@ public:
 };
 
 class RRangeBase {
-   using RCustomColumnBasePtr_t = std::shared_ptr<RCustomColumnBase>;
-   using RcustomColumnBasePtrMap_t = std::map<std::string, RCustomColumnBasePtr_t>;
-
 protected:
    RLoopManager *fLoopManager; ///< A raw pointer to the RLoopManager at the root of this functional graph. It is only
                                /// guaranteed to contain a valid address during an event loop.
@@ -848,8 +822,6 @@ public:
 
 template <typename PrevData>
 class RRange final : public RRangeBase {
-   using RCustomColumnBasePtr_t = std::shared_ptr<RCustomColumnBase>;
-   using RcustomColumnBasePtrMap_t = std::map<std::string, RCustomColumnBasePtr_t>;
    PrevData &fPrevData;
 
 public:

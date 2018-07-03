@@ -115,9 +115,6 @@ struct HistoUtils<T, true> {
    static bool HasAxisLimits(T &) { return true; }
 };
 
-using RCustomColumnBasePtr_t = std::shared_ptr<RCustomColumnBase>;
-using RcustomColumnBasePtrMap_t = std::map<std::string, RCustomColumnBasePtr_t>;
-
 // Generic filling (covers Histo2D, Histo3D, Profile1D and Profile2D actions, with and without weights)
 template <typename... BranchTypes, typename ActionTag, typename ActionResultType, typename PrevNodeType>
 RActionBase *BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<ActionResultType> &h,
@@ -277,7 +274,6 @@ ColumnNames_t GetValidatedColumnNames(RLoopManager &lm, const unsigned int nColu
 
 std::vector<bool> FindUndefinedDSColumns(const ColumnNames_t &requestedCols, const ColumnNames_t &definedDSCols);
 
-using RCustomColumnBasePtrMap_t = std::map<std::string, std::shared_ptr<RCustomColumnBase>>;
 using ColumnNames_t = ROOT::Detail::RDF::ColumnNames_t;
 
 template <typename T>
