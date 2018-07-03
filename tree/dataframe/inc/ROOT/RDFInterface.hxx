@@ -117,8 +117,8 @@ public:
    ////////////////////////////////////////////////////////////////////////////
    /// \brief Only enabled when building a RInterface<RLoopManager>
    template <typename T = Proxied, typename std::enable_if<std::is_same<T, RLoopManager>::value, int>::type = 0>
-   RInterface(const std::shared_ptr<Proxied> &proxied, RDFInternal::RBookedCustomColumns columns)
-      : fProxiedPtr(proxied), fImplWeakPtr(proxied), fDataSource(proxied->GetDataSource()), fCustomColumns(columns)
+   RInterface(const std::shared_ptr<Proxied> &proxied)
+      : fProxiedPtr(proxied), fImplWeakPtr(proxied), fDataSource(proxied->GetDataSource())
    {
       AddDefaultColumns();
    }
@@ -410,8 +410,7 @@ public:
       if (columnList.empty()) {
          auto nEntries = *this->Count();
          auto snapshotRDF = std::make_shared<RInterface<RLoopManager>>(
-            std::make_shared<RLoopManager>(nEntries),
-            RDFInternal::RBookedCustomColumns());
+            std::make_shared<RLoopManager>(nEntries));
          return MakeResultPtr(snapshotRDF, df, nullptr);
       }
       auto tree = df->GetTree();
@@ -520,8 +519,7 @@ public:
       if (columnList.empty()) {
          auto nEntries = *this->Count();
          RInterface<RLoopManager> emptyRDF(
-            std::make_shared<RLoopManager>(nEntries),
-            RDFInternal::RBookedCustomColumns());
+            std::make_shared<RLoopManager>(nEntries));
          return emptyRDF;
       }
 
@@ -1774,7 +1772,7 @@ private:
       // See https://sft.its.cern.ch/jira/browse/ROOT-9236 for more detail.
       auto rlm_ptr = std::make_shared<RLoopManager>(nullptr, validCols);
       auto snapshotRDF = std::make_shared<RInterface<RLoopManager>>(
-         rlm_ptr, RDFInternal::RBookedCustomColumns());
+         rlm_ptr);
       auto chain = std::make_shared<TChain>(fullTreename.c_str());
       chain->Add(std::string(filename).c_str());
       snapshotRDF->fProxiedPtr->SetTree(chain);
@@ -1809,8 +1807,7 @@ private:
       auto ds = std::make_unique<RLazyDS<BranchTypes...>>(std::make_pair(columnList[S], std::get<S>(colHolders))...);
 
       RInterface<RLoopManager> cachedRDF(
-         std::make_shared<RLoopManager>(std::move(ds), columnList),
-         RDFInternal::RBookedCustomColumns());
+         std::make_shared<RLoopManager>(std::move(ds), columnList));
       return cachedRDF;
    }
 
