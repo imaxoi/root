@@ -206,32 +206,6 @@ ColumnNames_t GetTopLevelBranchNames(TTree &t)
    return bNames;
 }
 
-void CheckCustomColumn(std::string_view definedCol, TTree *treePtr, const ColumnNames_t &customCols,
-                       const ColumnNames_t &dataSourceColumns)
-{
-   const std::string definedColStr(definedCol);
-   if (treePtr != nullptr) {
-      // check if definedCol is already present in TTree
-      const auto branch = treePtr->GetBranch(definedColStr.c_str());
-      if (branch != nullptr) {
-         const auto msg = "branch \"" + definedColStr + "\" already present in TTree";
-         throw std::runtime_error(msg);
-      }
-   }
-   // check if definedCol has already been `Define`d in the functional graph
-   if (std::find(customCols.begin(), customCols.end(), definedCol) != customCols.end()) {
-      const auto msg = "Redefinition of column \"" + definedColStr + "\"";
-      throw std::runtime_error(msg);
-   }
-   // check if definedCol is already present in the DataSource (but has not yet been `Define`d)
-   if (!dataSourceColumns.empty()) {
-      if (std::find(dataSourceColumns.begin(), dataSourceColumns.end(), definedCol) != dataSourceColumns.end()) {
-         const auto msg = "Redefinition of column \"" + definedColStr + "\" already present in the data-source";
-         throw std::runtime_error(msg);
-      }
-   }
-}
-
 void CheckTypesAndPars(unsigned int nTemplateParams, unsigned int nColumnNames)
 {
    if (nTemplateParams != nColumnNames) {
@@ -510,12 +484,11 @@ void BookFilterJit(RJittedFilter *jittedFilter, void *prevNode, std::string_view
    const auto &dsColumns = ds ? ds->GetColumnNames() : ColumnNames_t{};
 
    // not const because `ColumnTypesAsStrings` might delete redundant matches and replace variable names
-   auto usedBranches =
-      FindUsedColumnNames(expression, branches, *(customCols.fCustomColumnsNames), dsColumns, aliasMap);
+   auto usedBranches = FindUsedColumnNames(expression, branches, customCols.GetNames(), dsColumns, aliasMap);
    auto varNames = ReplaceDots(usedBranches);
    auto dotlessExpr = std::string(expression);
-   const auto usedColTypes = ColumnTypesAsString(usedBranches, varNames, aliasMap, *(customCols.fCustomColumnsNames),
-                                                 tree, ds, dotlessExpr, namespaceID);
+   const auto usedColTypes =
+      ColumnTypesAsString(usedBranches, varNames, aliasMap, customCols.GetNames(), tree, ds, dotlessExpr, namespaceID);
 
    TRegexp re("[^a-zA-Z0-9_]return[^a-zA-Z0-9_]");
    Ssiz_t matchedLen;
@@ -563,11 +536,11 @@ std::shared_ptr<ROOT::Detail::RDF::RJittedCustomColumn> BookDefineJit(std::strin
    const auto &dsColumns = ds ? ds->GetColumnNames() : ColumnNames_t{};
 
    // not const because `ColumnTypesAsStrings` might delete redundant matches and replace variable names
-   auto usedBranches = FindUsedColumnNames(expression, branches, *(customCols.fCustomColumnsNames), dsColumns, aliasMap);
+   auto usedBranches = FindUsedColumnNames(expression, branches, customCols.GetNames(), dsColumns, aliasMap);
    auto varNames = ReplaceDots(usedBranches);
    auto dotlessExpr = std::string(expression);
    const auto usedColTypes =
-      ColumnTypesAsString(usedBranches, varNames, aliasMap, *(customCols.fCustomColumnsNames), tree, ds, dotlessExpr, namespaceID);
+      ColumnTypesAsString(usedBranches, varNames, aliasMap, customCols.GetNames(), tree, ds, dotlessExpr, namespaceID);
 
    TRegexp re("[^a-zA-Z0-9_]return[^a-zA-Z0-9_]");
    Ssiz_t matchedLen;
@@ -626,8 +599,7 @@ std::string JitBuildAndBook(const ColumnNames_t &bl, const std::string &prevNode
    // retrieve branch type names as strings
    std::vector<std::string> columnTypeNames(nBranches);
    for (auto i = 0u; i < nBranches; ++i) {
-      const auto isCustomCol = std::find(customCols.fCustomColumnsNames->begin(), customCols.fCustomColumnsNames->end(),
-                                         bl[i]) != customCols.fCustomColumnsNames->end();
+      const auto isCustomCol = customCols.HasName(bl[i]);
       const auto columnTypeName = ColumnName2ColumnTypeName(bl[i], namespaceID, tree, ds, isCustomCol);
       if (columnTypeName.empty()) {
          std::string exceptionText = "The type of column ";

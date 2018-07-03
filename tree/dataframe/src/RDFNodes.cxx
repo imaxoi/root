@@ -240,7 +240,7 @@ void RJittedFilter::ClearValueReaders(unsigned int slot)
 void RJittedFilter::ClearTask(unsigned int slot)
 {
    R__ASSERT(fConcreteFilter != nullptr);
-   for (auto &column : *(fCustomColumns.fCustomColumns)) {
+   for (auto &column : fCustomColumns.GetColumns()) {
       column.second->ClearValueReaders(slot);
    }
    fConcreteFilter->ClearValueReaders(slot);

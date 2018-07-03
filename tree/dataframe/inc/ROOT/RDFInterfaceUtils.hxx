@@ -232,9 +232,6 @@ void CheckFilter(Filter &)
    static_assert(std::is_same<FilterRet_t, bool>::value, "filter functions must return a bool");
 }
 
-void CheckCustomColumn(std::string_view definedCol, TTree *treePtr, const ColumnNames_t &customCols,
-                       const ColumnNames_t &dataSourceColumns);
-
 using TmpBranchBasePtr_t = std::shared_ptr<RCustomColumnBase>;
 
 void BookFilterJit(RJittedFilter *jittedFilter, void *prevNode, std::string_view prevNodeTypeName,
@@ -284,9 +281,7 @@ using RCustomColumnBasePtrMap_t = std::map<std::string, std::shared_ptr<RCustomC
 using ColumnNames_t = ROOT::Detail::RDF::ColumnNames_t;
 
 template <typename T>
-void AddDSColumnsHelper(std::string_view name, const RDFInternal::RBookedCustomColumns &currentCols,
-                        std::shared_ptr<RCustomColumnBasePtrMap_t> &newCols,
-                        std::shared_ptr<ColumnNames_t> &newColsName, RDataSource &ds, unsigned int nSlots)
+void AddDSColumnsHelper(std::string_view name, RDFInternal::RBookedCustomColumns &currentCols, RDataSource &ds, unsigned int nSlots)
 {
    auto readers = ds.GetColumnReaders<T>(name);
    auto getValue = [readers](unsigned int slot) { return *readers[slot]; };
@@ -294,8 +289,9 @@ void AddDSColumnsHelper(std::string_view name, const RDFInternal::RBookedCustomC
 
    auto newCol =
       std::make_shared<NewCol_t>(name, std::move(getValue), ColumnNames_t{}, nSlots, currentCols, /*isDSColumn=*/true);
-   newCols->insert(std::make_pair(std::string(name), newCol));
-   newColsName->emplace_back(name);
+
+   currentCols.AddName(name);
+   currentCols.AddColumn(newCol, name);
 }
 
 // Take list of column names that must be defined, current map of custom columns, current list of defined column names,
@@ -307,21 +303,19 @@ AddDSColumns(const std::vector<std::string> &requiredCols, const RDFInternal::RB
              RDataSource &ds, unsigned int nSlots, std::index_sequence<S...>, TTraits::TypeList<ColumnTypes...>)
 {
 
-   const auto mustBeDefined = FindUndefinedDSColumns(requiredCols, *(currentCols.fCustomColumnsNames));
+   const auto mustBeDefined = FindUndefinedDSColumns(requiredCols, currentCols.GetNames());
    if (std::none_of(mustBeDefined.begin(), mustBeDefined.end(), [](bool b) { return b; })) {
       // no need to define any column
       return currentCols;
    } else {
-      auto newColumns = std::make_shared<RCustomColumnBasePtrMap_t>(*(currentCols.fCustomColumns));
-      auto newColumnsNames = std::make_shared<ColumnNames_t>(*(currentCols.fCustomColumnsNames));
+      auto newColumns(currentCols);
 
       // hack to expand a template parameter pack without c++17 fold expressions.
-      int expander[] = {(mustBeDefined[S] ? AddDSColumnsHelper<ColumnTypes>(requiredCols[S], currentCols, newColumns,
-                                                                            newColumnsNames, ds, nSlots)
+      int expander[] = {(mustBeDefined[S] ? AddDSColumnsHelper<ColumnTypes>(requiredCols[S], newColumns, ds, nSlots)
                                           : /*no-op*/ ((void)0),
                          0)..., 0};
       (void)expander; // avoid unused variable warnings
-      return RDFInternal::RBookedCustomColumns(std::move(newColumns), std::move(newColumnsNames));
+      return std::move(newColumns);
    }
 }
 

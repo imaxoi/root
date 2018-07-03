@@ -472,7 +472,7 @@ public:
 
    void InitSlot(TTreeReader *r, unsigned int slot) final
    {
-      for (auto &bookedBranch : *(fCustomColumns.fCustomColumns))
+      for (auto &bookedBranch : fCustomColumns.GetColumns())
          bookedBranch.second->InitSlot(r, slot);
 
       InitRDFValues(slot, fValues[slot], r, fBranches, fCustomColumns, TypeInd_t());
@@ -498,7 +498,7 @@ public:
    void FinalizeSlot(unsigned int slot) final
    {
       ClearValueReaders(slot);
-      for (auto &column : *(fCustomColumns.fCustomColumns)) {
+      for (auto &column : fCustomColumns.GetColumns()) {
          column.second->ClearValueReaders(slot);
       }
       fHelper.CallFinalizeTask(slot);
@@ -753,7 +753,7 @@ public:
 
    void InitSlot(TTreeReader *r, unsigned int slot) final
    {
-      for (auto &bookedBranch : *(fCustomColumns.fCustomColumns))
+      for (auto &bookedBranch : fCustomColumns.GetColumns())
          bookedBranch.second->InitSlot(r, slot);
       RDFInternal::InitRDFValues(slot, fValues[slot], r, fBranches, fCustomColumns, TypeInd_t());
    }
@@ -795,7 +795,7 @@ public:
 
    virtual void ClearTask(unsigned int slot) final
    {
-      for (auto &column : *(fCustomColumns.fCustomColumns)) {
+      for (auto &column : fCustomColumns.GetColumns()) {
          column.second->ClearValueReaders(slot);
       }
 
