@@ -500,13 +500,6 @@ void RLoopManager::InitNodeSlots(TTreeReader *r, unsigned int slot)
       ptr->InitSlot(r, slot);
    for (auto &ptr : fBookedFilters)
       ptr->InitSlot(r, slot);
-
-   /* //-
-   per ogni azione
-      defalgga la colonna
-   per ogni filtro
-      deflagga la colonna
-   */
    for (auto &callback : fCallbacksOnce)
       callback(slot);
 }

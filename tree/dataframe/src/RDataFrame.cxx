@@ -679,7 +679,6 @@ thread-safety, see [here](#generic-actions).
 // clang-format on
 
 namespace ROOT {
-namespace RDFInternal = ROOT::Internal::RDF;
 
 ////////////////////////////////////////////////////////////////////////////
 /// \brief Build the dataframe
