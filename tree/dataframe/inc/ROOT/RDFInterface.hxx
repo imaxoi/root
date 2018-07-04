@@ -1781,12 +1781,6 @@ private:
       // in memory!
       RDFInternal::CheckTypesAndPars(sizeof...(BranchTypes), columnList.size());
 
-      //- TODO
-      if (fDataSource)
-         fCustomColumns =
-            RDFInternal::AddDSColumns(columnList, fCustomColumns, *fDataSource, GetLoopManager()->GetNSlots(), s,
-                                      TTraits::TypeList<BranchTypes...>());
-
       auto colHolders = std::make_tuple(Take<BranchTypes>(columnList[S])...);
       auto ds = std::make_unique<RLazyDS<BranchTypes...>>(std::make_pair(columnList[S], std::get<S>(colHolders))...);
 
