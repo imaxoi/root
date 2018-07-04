@@ -234,8 +234,8 @@ class RJittedCustomColumn : public RCustomColumnBase {
    std::unique_ptr<RCustomColumnBase> fConcreteCustomColumn = nullptr;
 
 public:
-   RJittedCustomColumn(std::string_view name, RDFInternal::RBookedCustomColumns customColumns, unsigned int nSlots)
-      : RCustomColumnBase(name, nSlots, /*isDSColumn=*/false, customColumns)
+   RJittedCustomColumn(std::string_view name, unsigned int nSlots)
+      : RCustomColumnBase(name, nSlots, /*isDSColumn=*/false, RDFInternal::RBookedCustomColumns())
    {
    }
 
@@ -659,8 +659,8 @@ class RJittedFilter final : public RFilterBase {
    std::unique_ptr<RFilterBase> fConcreteFilter = nullptr;
 
 public:
-   RJittedFilter(RLoopManager *lm, std::string_view name, RDFInternal::RBookedCustomColumns customColumns)
-      : RFilterBase(lm, name, lm->GetNSlots(), customColumns)
+   RJittedFilter(RLoopManager *lm, std::string_view name)
+      : RFilterBase(lm, name, lm->GetNSlots(), RDFInternal::RBookedCustomColumns())
    {
    }
 

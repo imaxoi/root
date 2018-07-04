@@ -213,7 +213,7 @@ public:
                                                                               fDataSource);
 
       const auto prevNodeTypeName = upcastInterface.GetNodeTypeName();
-      const auto jittedFilter = std::make_shared<RDFDetail::RJittedFilter>(df.get(), name, fCustomColumns);
+      const auto jittedFilter = std::make_shared<RDFDetail::RJittedFilter>(df.get(), name);
       RDFInternal::BookFilterJit(jittedFilter.get(), upcastNode.get(), prevNodeTypeName, name, expression, aliasMap,
                                  branches, fCustomColumns, tree, fDataSource, df->GetID());
       df->Book(jittedFilter);
@@ -323,7 +323,7 @@ public:
       RDFInternal::CheckCustomColumn(name, loopManager->GetTree(), fCustomColumns.GetNames(),
                                      fDataSource ? fDataSource->GetColumnNames() : ColumnNames_t{});
 
-      auto jittedCustomColumn = std::make_shared<RDFDetail::RJittedCustomColumn>(name, fCustomColumns, loopManager->GetNSlots());
+      auto jittedCustomColumn = std::make_shared<RDFDetail::RJittedCustomColumn>(name, loopManager->GetNSlots());
 
       RDFInternal::BookDefineJit(name, expression, *loopManager, fDataSource, jittedCustomColumn, fCustomColumns);
 
