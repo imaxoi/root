@@ -587,7 +587,7 @@ public:
 
       auto df = GetLoopManager();
       using Range_t = RDFDetail::RRange<Proxied>;
-      auto RangePtr = std::make_shared<Range_t>(begin, end, stride, *fProxiedPtr, fCustomColumns);
+      auto RangePtr = std::make_shared<Range_t>(begin, end, stride, *fProxiedPtr);
       df->Book(RangePtr);
 
       RInterface<RDFDetail::RRange<Proxied>> tdf_r(RangePtr, fImplWeakPtr, fCustomColumns, fDataSource);

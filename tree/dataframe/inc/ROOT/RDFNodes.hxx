@@ -795,13 +795,11 @@ protected:
    bool fHasStopped{false};         ///< True if the end of the range has been reached
    const unsigned int fNSlots;      ///< Number of thread slots used by this node, inherited from parent node.
 
-   RDFInternal::RBookedCustomColumns fCustomColumns;
-
    void ResetCounters();
 
 public:
    RRangeBase(RLoopManager *implPtr, unsigned int start, unsigned int stop, unsigned int stride,
-              const unsigned int nSlots, const RDFInternal::RBookedCustomColumns &customColumns);
+              const unsigned int nSlots);
 
    RRangeBase &operator=(const RRangeBase &) = delete;
    virtual ~RRangeBase() = default;
@@ -825,10 +823,8 @@ class RRange final : public RRangeBase {
    PrevData &fPrevData;
 
 public:
-   RRange(unsigned int start, unsigned int stop, unsigned int stride, PrevData &pd,
-          const RDFInternal::RBookedCustomColumns &customColumns)
-      : RRangeBase(pd.GetLoopManagerUnchecked(), start, stop, stride, pd.GetLoopManagerUnchecked()->GetNSlots(),
-                   customColumns),
+   RRange(unsigned int start, unsigned int stop, unsigned int stride, PrevData &pd)
+      : RRangeBase(pd.GetLoopManagerUnchecked(), start, stop, stride, pd.GetLoopManagerUnchecked()->GetNSlots()),
         fPrevData(pd)
    {
    }
