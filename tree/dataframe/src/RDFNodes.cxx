@@ -49,7 +49,7 @@ namespace Internal {
 namespace RDF {
 
 RActionBase::RActionBase(RLoopManager *implPtr, const unsigned int nSlots,
-                         RDFInternal::RBookedCustomColumns customColumns)
+                         const RDFInternal::RBookedCustomColumns &customColumns)
    : fLoopManager(implPtr), fNSlots(nSlots), fCustomColumns(customColumns)
 {
 }
@@ -81,7 +81,7 @@ template class TColumnValue<std::vector<ULong64_t>>;
 
 //- TODO: fLastCheckedEntry(std::vector<Long64_t>(fNSlots, -1)) riumettilo in initNode, chiamalo da fuori e ricordati di rimettere a false il flag di inizializzazione nel cleanup.
 RCustomColumnBase::RCustomColumnBase(std::string_view name, const unsigned int nSlots, const bool isDSColumn,
-                                     RDFInternal::RBookedCustomColumns customColumns)
+                                     const RDFInternal::RBookedCustomColumns &customColumns)
    : fName(name), fNSlots(nSlots), fIsDataSourceColumn(isDSColumn),
      fLastCheckedEntry(std::vector<Long64_t>(fNSlots, -1)), fCustomColumns(customColumns)
 {
@@ -134,7 +134,7 @@ void RJittedCustomColumn::InitNode()
 }
 
 RFilterBase::RFilterBase(RLoopManager *implPtr, std::string_view name, const unsigned int nSlots,
-                         RDFInternal::RBookedCustomColumns customColumns)
+                         const RDFInternal::RBookedCustomColumns &customColumns)
    : fLoopManager(implPtr), fLastResult(nSlots), fAccepted(nSlots), fRejected(nSlots), fName(name), fNSlots(nSlots),
      fCustomColumns(customColumns)
 {
@@ -683,7 +683,7 @@ void RLoopManager::RegisterCallback(ULong64_t everyNEvents, std::function<void(u
 }
 
 RRangeBase::RRangeBase(RLoopManager *implPtr, unsigned int start, unsigned int stop, unsigned int stride,
-                       const unsigned int nSlots, RDFInternal::RBookedCustomColumns customColumns)
+                       const unsigned int nSlots, const RDFInternal::RBookedCustomColumns &customColumns)
    : fLoopManager(implPtr), fStart(start), fStop(stop), fStride(stride), fNSlots(nSlots), fCustomColumns(customColumns)
 {
 }

@@ -211,7 +211,7 @@ protected:
 
 public:
    RCustomColumnBase(std::string_view name, const unsigned int nSlots, const bool isDSColumn,
-                     RDFInternal::RBookedCustomColumns customColumns);
+                     const RDFInternal::RBookedCustomColumns &customColumns);
 
    RCustomColumnBase &operator=(const RCustomColumnBase &) = delete;
    virtual ~RCustomColumnBase(); // outlined defaulted.
@@ -415,7 +415,7 @@ protected:
    RBookedCustomColumns fCustomColumns;
 
 public:
-   RActionBase(RLoopManager *implPtr, const unsigned int nSlots, RBookedCustomColumns customColumns);
+   RActionBase(RLoopManager *implPtr, const unsigned int nSlots, const RBookedCustomColumns &customColumns);
 
    RActionBase(const RActionBase &) = delete;
    RActionBase &operator=(const RActionBase &) = delete;
@@ -442,7 +442,7 @@ class RAction final : public RActionBase {
    std::vector<RDFValueTuple_t<ColumnTypes_t>> fValues;
 
 public:
-   RAction(Helper &&h, const ColumnNames_t &bl, PrevDataFrame &pd, RBookedCustomColumns customColumns)
+   RAction(Helper &&h, const ColumnNames_t &bl, PrevDataFrame &pd, const RBookedCustomColumns &customColumns)
       : RActionBase(pd.GetLoopManagerUnchecked(), pd.GetLoopManagerUnchecked()->GetNSlots(), customColumns),
         fHelper(std::move(h)), fBranches(bl), fPrevData(pd), fValues(fNSlots)
    {
@@ -538,7 +538,7 @@ class RCustomColumn final : public RCustomColumnBase {
 
 public:
    RCustomColumn(std::string_view name, F &&expression, const ColumnNames_t &bl, unsigned int nSlots,
-                 RDFInternal::RBookedCustomColumns customColumns, bool isDSColumn = false)
+                 const RDFInternal::RBookedCustomColumns &customColumns, bool isDSColumn = false)
       : RCustomColumnBase(name, nSlots, isDSColumn, customColumns), fExpression(std::move(expression)), fBranches(bl),
         fLastResults(fNSlots), fValues(fNSlots)
    {
@@ -621,7 +621,7 @@ protected:
 
 public:
    RFilterBase(RLoopManager *df, std::string_view name, const unsigned int nSlots,
-               RDFInternal::RBookedCustomColumns customColumns);
+               const RDFInternal::RBookedCustomColumns &customColumns);
    RFilterBase &operator=(const RFilterBase &) = delete;
    virtual ~RFilterBase() = default;
 
@@ -692,7 +692,7 @@ class RFilter final : public RFilterBase {
    std::vector<RDFInternal::RDFValueTuple_t<ColumnTypes_t>> fValues;
 
 public:
-   RFilter(FilterF &&f, const ColumnNames_t &bl, PrevDataFrame &pd, RDFInternal::RBookedCustomColumns customColumns,
+   RFilter(FilterF &&f, const ColumnNames_t &bl, PrevDataFrame &pd, const RDFInternal::RBookedCustomColumns &customColumns,
            std::string_view name = "")
       : RFilterBase(pd.GetLoopManagerUnchecked(), name, pd.GetLoopManagerUnchecked()->GetNSlots(), customColumns),
         fFilter(std::move(f)), fBranches(bl), fPrevData(pd), fValues(fNSlots)
@@ -801,7 +801,7 @@ protected:
 
 public:
    RRangeBase(RLoopManager *implPtr, unsigned int start, unsigned int stop, unsigned int stride,
-              const unsigned int nSlots, RDFInternal::RBookedCustomColumns customColumns);
+              const unsigned int nSlots, const RDFInternal::RBookedCustomColumns &customColumns);
 
    RRangeBase &operator=(const RRangeBase &) = delete;
    virtual ~RRangeBase() = default;
@@ -826,7 +826,7 @@ class RRange final : public RRangeBase {
 
 public:
    RRange(unsigned int start, unsigned int stop, unsigned int stride, PrevData &pd,
-          RDFInternal::RBookedCustomColumns customColumns)
+          const RDFInternal::RBookedCustomColumns &customColumns)
       : RRangeBase(pd.GetLoopManagerUnchecked(), start, stop, stride, pd.GetLoopManagerUnchecked()->GetNSlots(),
                    customColumns),
         fPrevData(pd)

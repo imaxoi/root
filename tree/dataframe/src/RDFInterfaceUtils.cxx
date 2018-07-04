@@ -556,7 +556,7 @@ void BookFilterJit(RJittedFilter *jittedFilter, void *prevNode, std::string_view
 // Jit a Define call
 void BookDefineJit(std::string_view name, std::string_view expression, RLoopManager &lm, RDataSource *ds,
                    const std::shared_ptr<RJittedCustomColumn> &jittedCustomColumn,
-                   RDFInternal::RBookedCustomColumns customCols)
+                   const RDFInternal::RBookedCustomColumns &customCols)
 {
    const auto &aliasMap = lm.GetAliasMap();
    auto *const tree = lm.GetTree();
