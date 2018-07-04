@@ -211,11 +211,12 @@ RActionBase *BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<double>
 // Standard Deviation action
 template <typename BranchType, typename PrevNodeType>
 RActionBase *BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<double> &stdDeviationV, const unsigned int nSlots,
-                          RLoopManager &loopManager, PrevNodeType &prevNode, ActionTags::StdDev)
+                          RLoopManager &loopManager, PrevNodeType &prevNode, ActionTags::StdDev,
+                          RDFInternal::RBookedCustomColumns customColumns)
 {
    using Helper_t = StdDevHelper;
    using Action_t = RAction<Helper_t, PrevNodeType, TTraits::TypeList<BranchType>>;
-   auto action = std::make_shared<Action_t>(Helper_t(stdDeviationV, nSlots), bl, prevNode);
+   auto action = std::make_shared<Action_t>(Helper_t(stdDeviationV, nSlots), bl, prevNode, customColumns);
    loopManager.Book(action);
    return action.get();
 }
