@@ -346,20 +346,19 @@ template <typename F>
 void JitDefineHelper(F &&f, const ColumnNames_t &cols, std::string_view name, RLoopManager *lm,
                      RJittedCustomColumn &jittedCustomCol, RDFInternal::RBookedCustomColumns *customColumns)
 {
-    using NewCol_t = RCustomColumn<F, CustomColExtraArgs::None>;
-    using ColTypes_t = typename TTraits::CallableTraits<F>::arg_types;
-    constexpr auto nColumns = ColTypes_t::list_size;
+   using NewCol_t = RCustomColumn<F, CustomColExtraArgs::None>;
+   using ColTypes_t = typename TTraits::CallableTraits<F>::arg_types;
+   constexpr auto nColumns = ColTypes_t::list_size;
 
-    auto ds = lm->GetDataSource();
-    auto newColumns = ds ? RDFInternal::AddDSColumns(cols, *customColumns, *ds, lm->GetNSlots(),
+   auto ds = lm->GetDataSource();
+   auto newColumns = ds ? RDFInternal::AddDSColumns(cols, *customColumns, *ds, lm->GetNSlots(),
                                                     std::make_index_sequence<nColumns>(), ColTypes_t())
                         : *customColumns;
 
    // customColumns points to the columns structure in the heap, created before the jitted call so that the jitter can share data after it has lazily compiled the code. Here the data has been used and the memory can be freed.
    delete customColumns;
 
-    jittedCustomCol.SetCustomColumn(std::make_unique<NewCol_t>(name, std::move(f), cols, lm->GetNSlots(),
-                                    newColumns));
+   jittedCustomCol.SetCustomColumn(std::make_unique<NewCol_t>(name, std::move(f), cols, lm->GetNSlots(), newColumns));
 }
 
 /// Convenience function invoked by jitted code to build action nodes at runtime

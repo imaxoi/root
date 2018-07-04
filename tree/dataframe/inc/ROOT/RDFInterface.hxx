@@ -428,9 +428,9 @@ public:
       const auto &customCols = fCustomColumns.GetNames();
       const auto dontConvertVector = false;
 
-      const auto validCols = GetValidatedColumnNames(columnList.size(), columnList);
+      const auto validColumnNames = GetValidatedColumnNames(columnList.size(), columnList);
 
-      for (auto &c : validCols) {
+      for (auto &c : validColumnNames) {
          const auto isCustom = std::find(customCols.begin(), customCols.end(), c) != customCols.end();
          snapCall << RDFInternal::ColumnName2ColumnTypeName(c, nsID, tree, fDataSource, isCustom, dontConvertVector)
                   << ", ";
@@ -648,14 +648,14 @@ public:
       using ColTypes_t = TypeTraits::RemoveFirstParameter_t<typename TTraits::CallableTraits<F>::arg_types>;
       constexpr auto nColumns = ColTypes_t::list_size;
 
-      const auto usedColumnNames = GetValidatedColumnNames(nColumns, columns);
+      const auto validColumnNames = GetValidatedColumnNames(nColumns, columns);
 
-      auto newColumns = CheckAndFillDSColumns(usedColumnNames, std::make_index_sequence<nColumns>(), ColTypes_t());
+      auto newColumns = CheckAndFillDSColumns(validColumnNames, std::make_index_sequence<nColumns>(), ColTypes_t());
 
       using Helper_t = RDFInternal::ForeachSlotHelper<F>;
       using Action_t = RDFInternal::RAction<Helper_t, Proxied>;
       loopManager->Book(
-         std::make_shared<Action_t>(Helper_t(std::move(f)), usedColumnNames, *fProxiedPtr, newColumns));
+         std::make_shared<Action_t>(Helper_t(std::move(f)), validColumnNames, *fProxiedPtr, newColumns));
       loopManager->Run();
    }
 
@@ -741,16 +741,16 @@ public:
       auto loopManager = GetLoopManager();
       const auto columns = column.empty() ? ColumnNames_t() : ColumnNames_t({std::string(column)});
 
-      const auto selectedCols = GetValidatedColumnNames(1, columns);
+      const auto validColumnNames = GetValidatedColumnNames(1, columns);
 
-      auto newColumns = CheckAndFillDSColumns(selectedCols,
+      auto newColumns = CheckAndFillDSColumns(validColumnNames,
                                                  std::make_index_sequence<1>(), TTraits::TypeList<T>());
 
       using Helper_t = RDFInternal::TakeHelper<T, T, COLL>;
       using Action_t = RDFInternal::RAction<Helper_t, Proxied>;
       auto valuesPtr = std::make_shared<COLL>();
       const auto nSlots = loopManager->GetNSlots();
-      auto action = std::make_shared<Action_t>(Helper_t(valuesPtr, nSlots), selectedCols, *fProxiedPtr, newColumns);
+      auto action = std::make_shared<Action_t>(Helper_t(valuesPtr, nSlots), validColumnNames, *fProxiedPtr, newColumns);
       loopManager->Book(action);
       return MakeResultPtr(valuesPtr, loopManager, action.get());
    }
@@ -1384,21 +1384,20 @@ public:
              typename T = TTraits::TakeFirstParameter_t<TTraits::RemoveFirstParameter_t<ArgTypes>>>
    RResultPtr<U> Aggregate(AccFun aggregator, MergeFun merger, std::string_view columnName, const U &aggIdentity)
    {
-      using ColTypes_t = typename TTraits::CallableTraits<AccFun>::arg_types;
       RDFInternal::CheckAggregate<R, MergeFun>(ArgTypesNoDecay());
       auto loopManager = GetLoopManager();
       const auto columns = columnName.empty() ? ColumnNames_t() : ColumnNames_t({std::string(columnName)});
       constexpr auto nColumns = ArgTypes::list_size;
 
-      const auto selectedColumnsNames = GetValidatedColumnNames(1, columns);
+      const auto validColumnNames = GetValidatedColumnNames(1, columns);
 
-      auto newColumns = CheckAndFillDSColumns(selectedColumnsNames, std::make_index_sequence<nColumns>(), ColTypes_t());
+      auto newColumns = CheckAndFillDSColumns(validColumnNames, std::make_index_sequence<nColumns>(), ArgTypes());
 
       auto accObjPtr = std::make_shared<U>(aggIdentity);
       using Helper_t = RDFInternal::AggregateHelper<AccFun, MergeFun, R, T, U>;
       using Action_t = typename RDFInternal::RAction<Helper_t, Proxied>;
       auto action = std::make_shared<Action_t>(
-         Helper_t(std::move(aggregator), std::move(merger), accObjPtr, loopManager->GetNSlots()), selectedColumnsNames,
+         Helper_t(std::move(aggregator), std::move(merger), accObjPtr, loopManager->GetNSlots()), validColumnNames,
          *fProxiedPtr, newColumns);
 
       loopManager->Book(action);
@@ -1590,14 +1589,14 @@ private:
       auto lm = GetLoopManager();
       constexpr auto nColumns = sizeof...(BranchTypes);
 
-      const auto selectedCols = GetValidatedColumnNames(nColumns, columns);
+      const auto validColumnNames = GetValidatedColumnNames(nColumns, columns);
 
       const auto nSlots = lm->GetNSlots();
-      auto newColumns = CheckAndFillDSColumns(selectedCols, std::make_index_sequence<nColumns>(),
+      auto newColumns = CheckAndFillDSColumns(validColumnNames, std::make_index_sequence<nColumns>(),
                                                 RDFInternal::TypeList<BranchTypes...>());
 
       auto actionPtr =
-         RDFInternal::BuildAndBook<BranchTypes...>(selectedCols, r, nSlots, *lm, *fProxiedPtr, ActionTag{}, newColumns);
+         RDFInternal::BuildAndBook<BranchTypes...>(validColumnNames, r, nSlots, *lm, *fProxiedPtr, ActionTag{}, newColumns);
       return MakeResultPtr(r, lm, actionPtr);
    }
 
@@ -1620,7 +1619,7 @@ private:
       auto rOnHeap = RDFInternal::MakeSharedOnHeap(r);
       auto upcastNode = RDFInternal::UpcastNode(fProxiedPtr);
 
-      RInterface<TypeTraits::TakeFirstParameter_t<decltype(upcastNode)>> upcastInterface(upcastNode, fImplWeakPtr,
+      RInterface<typename decltype(upcastNode)::element_type> upcastInterface(upcastNode, fImplWeakPtr,
                                                                                          fCustomColumns, fDataSource);
 
       auto resultProxyAndActionPtrPtr = MakeResultPtr(r, lm);
