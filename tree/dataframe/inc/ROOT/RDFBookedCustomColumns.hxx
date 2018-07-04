@@ -18,7 +18,6 @@
 #include <string_view>
 #include <algorithm>
 #include "TString.h"
-#include "TTree.h"
 
 namespace ROOT {
 namespace Detail{
@@ -83,10 +82,6 @@ public:
    ////////////////////////////////////////////////////////////////////////////
    /// \brief Returns the list of the pointers to the defined columns
    RCustomColumnBasePtrMap_t GetColumns() const { return *fCustomColumns; }
-
-   ////////////////////////////////////////////////////////////////////////////
-   /// \brief Check if a column name is a valid one
-   void CheckCustomColumn(std::string_view definedCol, TTree *treePtr, const ColumnNames_t &dataSourceColumns) const;
 
    ////////////////////////////////////////////////////////////////////////////
    /// \brief Check if the provided name is tracked in the names list

@@ -206,6 +206,32 @@ ColumnNames_t GetTopLevelBranchNames(TTree &t)
    return bNames;
 }
 
+void CheckCustomColumn(std::string_view definedCol, TTree *treePtr, const ColumnNames_t &customCols,
+                       const ColumnNames_t &dataSourceColumns)
+{
+   const std::string definedColStr(definedCol);
+   if (treePtr != nullptr) {
+      // check if definedCol is already present in TTree
+      const auto branch = treePtr->GetBranch(definedColStr.c_str());
+      if (branch != nullptr) {
+         const auto msg = "branch \"" + definedColStr + "\" already present in TTree";
+         throw std::runtime_error(msg);
+      }
+   }
+   // check if definedCol has already been `Define`d in the functional graph
+   if (std::find(customCols.begin(), customCols.end(), definedCol) != customCols.end()) {
+      const auto msg = "Redefinition of column \"" + definedColStr + "\"";
+      throw std::runtime_error(msg);
+   }
+   // check if definedCol is already present in the DataSource (but has not yet been `Define`d)
+   if (!dataSourceColumns.empty()) {
+      if (std::find(dataSourceColumns.begin(), dataSourceColumns.end(), definedCol) != dataSourceColumns.end()) {
+         const auto msg = "Redefinition of column \"" + definedColStr + "\" already present in the data-source";
+         throw std::runtime_error(msg);
+      }
+   }
+}
+
 void CheckTypesAndPars(unsigned int nTemplateParams, unsigned int nColumnNames)
 {
    if (nTemplateParams != nColumnNames) {

@@ -320,7 +320,7 @@ public:
    RInterface<Proxied, DS_t> Define(std::string_view name, std::string_view expression)
    {
       auto loopManager = GetLoopManager();
-      fCustomColumns.CheckCustomColumn(name, loopManager->GetTree(),
+      RDFInternal::CheckCustomColumn(name, loopManager->GetTree(), fCustomColumns.GetNames(),
                                      fDataSource ? fDataSource->GetColumnNames() : ColumnNames_t{});
 
       auto jittedCustomColumn = std::make_shared<RDFDetail::RJittedCustomColumn>(name, fCustomColumns, loopManager->GetNSlots());
@@ -354,7 +354,7 @@ public:
       auto &dsColumnNames = fDataSource ? fDataSource->GetColumnNames() : ColumnNames_t{};
 
       // If the alias name is a column name, there is a problem
-      fCustomColumns.CheckCustomColumn(alias, loopManager->GetTree(),
+      RDFInternal::CheckCustomColumn(alias, loopManager->GetTree(), fCustomColumns.GetNames(),
                                      dsColumnNames);
 
       const auto validColumnName = GetValidatedColumnNames(1, {std::string(columnName)})[0];
@@ -1641,7 +1641,7 @@ private:
    DefineImpl(std::string_view name, F &&expression, const ColumnNames_t &columns)
    {
       auto loopManager = GetLoopManager();
-      fCustomColumns.CheckCustomColumn(name, loopManager->GetTree(),
+      RDFInternal::CheckCustomColumn(name, loopManager->GetTree(), fCustomColumns.GetNames(),
                                      fDataSource ? fDataSource->GetColumnNames() : ColumnNames_t{});
 
       using ArgTypes_t = typename TTraits::CallableTraits<F>::arg_types;
