@@ -323,11 +323,13 @@ public:
       fCustomColumns.CheckCustomColumn(name, loopManager->GetTree(),
                                      fDataSource ? fDataSource->GetColumnNames() : ColumnNames_t{});
 
-      auto jitted = RDFInternal::BookDefineJit(name, expression, *loopManager, fDataSource, fCustomColumns);
+      auto jittedCustomColumn = std::make_shared<RDFDetail::RJittedCustomColumn>(name, fCustomColumns, loopManager->GetNSlots());
+
+      RDFInternal::BookDefineJit(name, expression, *loopManager, fDataSource, jittedCustomColumn, fCustomColumns);
 
       RDFInternal::RBookedCustomColumns newCols(fCustomColumns);
       newCols.AddName(name);
-      newCols.AddColumn(jitted, name);
+      newCols.AddColumn(jittedCustomColumn, name);
 
       RInterface<Proxied, DS_t> newInterface(
          fProxiedPtr, fImplWeakPtr, std::move(newCols),

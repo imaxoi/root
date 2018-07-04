@@ -238,7 +238,7 @@ void BookFilterJit(RJittedFilter *jittedFilter, void *prevNode, std::string_view
                    const RDFInternal::RBookedCustomColumns &customCols, TTree *tree, RDataSource *ds,
                    unsigned int namespaceID);
 
-std::shared_ptr<ROOT::Detail::RDF::RJittedCustomColumn> BookDefineJit(std::string_view name, std::string_view expression, RLoopManager &lm, RDataSource *ds,
+void BookDefineJit(std::string_view name, std::string_view expression, RLoopManager &lm, RDataSource *ds, const std::shared_ptr<RJittedCustomColumn>& jittedCustomColumn,
                    RDFInternal::RBookedCustomColumns customCols);
 
 std::string JitBuildAndBook(const ColumnNames_t &bl, const std::string &prevNodeTypename, void *prevNode,

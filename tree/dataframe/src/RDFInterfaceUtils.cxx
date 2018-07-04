@@ -501,6 +501,8 @@ void BookFilterJit(RJittedFilter *jittedFilter, void *prevNode, std::string_view
    const auto jittedFilterAddr = PrettyPrintAddr(jittedFilter);
    const auto prevNodeAddr = PrettyPrintAddr(prevNode);
 
+   // This call is to store the structure on the heap that will be lazily used by the jitted method, in charge of
+   // cleaning the memory.
    ROOT::Internal::RDF::RBookedCustomColumns *columnsOnHeap = new ROOT::Internal::RDF::RBookedCustomColumns(customCols);
    const auto columnsOnHeapAddr = PrettyPrintAddr(columnsOnHeap);
 
@@ -526,7 +528,8 @@ void BookFilterJit(RJittedFilter *jittedFilter, void *prevNode, std::string_view
 }
 
 // Jit a Define call
-std::shared_ptr<ROOT::Detail::RDF::RJittedCustomColumn> BookDefineJit(std::string_view name, std::string_view expression, RLoopManager &lm, RDataSource *ds,
+void BookDefineJit(std::string_view name, std::string_view expression, RLoopManager &lm, RDataSource *ds,
+                   const std::shared_ptr<RJittedCustomColumn> &jittedCustomColumn,
                    RDFInternal::RBookedCustomColumns customCols)
 {
    const auto &aliasMap = lm.GetAliasMap();
@@ -547,8 +550,6 @@ std::shared_ptr<ROOT::Detail::RDF::RJittedCustomColumn> BookDefineJit(std::strin
    const bool hasReturnStmt = re.Index(dotlessExpr, &matchedLen) != -1;
 
    TryToJitExpression(dotlessExpr, varNames, usedColTypes, hasReturnStmt);
-
-   const auto jittedCustomColumn = std::make_shared<RJittedCustomColumn>(name, customCols, lm.GetNSlots());
 
   const auto definelambda = BuildLambdaString(dotlessExpr, varNames, usedColTypes, hasReturnStmt);
    const auto lambdaName = "eval_" + std::string(name);
@@ -583,7 +584,6 @@ const auto ns = "__tdf" + std::to_string(namespaceID);
 
    lm.ToJit(defineInvocation.str());
 
-   return jittedCustomColumn;
 }
 
 // Jit and call something equivalent to "this->BuildAndBook<BranchTypes...>(params...)"
