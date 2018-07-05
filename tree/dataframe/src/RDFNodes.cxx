@@ -79,11 +79,9 @@ template class TColumnValue<std::vector<ULong64_t>>;
 } // namespace Internal
 } // namespace ROOT
 
-//- TODO: fLastCheckedEntry(std::vector<Long64_t>(fNSlots, -1)) riumettilo in initNode, chiamalo da fuori e ricordati di rimettere a false il flag di inizializzazione nel cleanup.
 RCustomColumnBase::RCustomColumnBase(std::string_view name, const unsigned int nSlots, const bool isDSColumn,
                                      const RDFInternal::RBookedCustomColumns &customColumns)
-   : fName(name), fNSlots(nSlots), fIsDataSourceColumn(isDSColumn),
-     fLastCheckedEntry(std::vector<Long64_t>(fNSlots, -1)), fCustomColumns(customColumns)
+   : fName(name), fNSlots(nSlots), fIsDataSourceColumn(isDSColumn), fCustomColumns(customColumns)
 {
 }
 
@@ -95,7 +93,15 @@ std::string RCustomColumnBase::GetName() const
    return fName;
 }
 
-void RCustomColumnBase::InitNode() {}
+void RCustomColumnBase::InitNode()
+{
+   // TODO: This method is called by each filter and action on all their columns. It may happend that it is called
+   // multiple time on the same column.
+   fLastCheckedEntry = std::vector<Long64_t>(fNSlots, -1);
+   for (auto &column : fCustomColumns.GetColumns()) {
+      column.second->InitNode();
+   }
+}
 
 void RJittedCustomColumn::InitSlot(TTreeReader *r, unsigned int slot)
 {
@@ -161,6 +167,10 @@ void RFilterBase::FillReport(ROOT::RDF::RCutFlowReport &rep) const
 
 void RFilterBase::InitNode()
 {
+   for (auto &column : fCustomColumns.GetColumns()) {
+      column.second->InitNode();
+   }
+
    fLastCheckedEntry = std::vector<Long64_t>(fNSlots, -1);
    if (!fName.empty()) // if this is a named filter we care about its report count
       ResetReportCount();
@@ -494,8 +504,6 @@ void RLoopManager::RunAndCheckFilters(unsigned int slot, Long64_t entry)
 /// a particular slot will be using.
 void RLoopManager::InitNodeSlots(TTreeReader *r, unsigned int slot)
 {
-   // booked branches must be initialized first because other nodes might need to point to the values they encapsulate
-
    for (auto &ptr : fBookedActions)
       ptr->InitSlot(r, slot);
    for (auto &ptr : fBookedFilters)

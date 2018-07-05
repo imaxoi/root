@@ -452,7 +452,13 @@ public:
    RAction &operator=(const RAction &) = delete;
    ~RAction() { fHelper.Finalize(); }
 
-   void Initialize() final { fHelper.Initialize(); }
+   void Initialize() final {
+      for (auto &column : fCustomColumns.GetColumns()) {
+         column.second->InitNode();
+      }
+      fHelper.Initialize();
+
+   }
 
    void InitSlot(TTreeReader *r, unsigned int slot) final
    {
