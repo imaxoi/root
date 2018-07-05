@@ -542,7 +542,7 @@ public:
          snapCall << RDFInternal::ColumnName2ColumnTypeName(c, nsID, tree, fDataSource, isCustom) << ", ";
       };
       if (!columnList.empty())
-         snapCall.seekp(-2, snapCall.cur);                          // remove the last ",
+         snapCall.seekp(-2, snapCall.cur); // remove the last ",
       snapCall << ">(*reinterpret_cast<std::vector<std::string>*>(" // vector<string> should be ColumnNames_t
                << std::hex << std::showbase << (size_t)&columnList << "));";
       // jit snapCall, return result
