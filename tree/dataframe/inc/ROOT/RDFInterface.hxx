@@ -331,6 +331,8 @@ public:
       newCols.AddName(name);
       newCols.AddColumn(jittedCustomColumn, name);
 
+      loopManager->RegisterCustomColumn(jittedCustomColumn);
+
       RInterface<Proxied, DS_t> newInterface(
          fProxiedPtr, fImplWeakPtr, std::move(newCols),
          fDataSource);
@@ -1490,9 +1492,12 @@ private:
       using NewColEntry_t =
          RDFDetail::RCustomColumn<decltype(entryColGen), RDFDetail::CustomColExtraArgs::SlotAndEntry>;
 
+      auto entryColumn = std::make_shared<NewColEntry_t>(entryColName, std::move(entryColGen), newCols.GetNames(), loopManager->GetNSlots(),
+                                         newCols);
       newCols.AddName(entryColName);
-      newCols.AddColumn(std::make_shared<NewColEntry_t>(entryColName, std::move(entryColGen), newCols.GetNames(), loopManager->GetNSlots(),
-                                         newCols), entryColName);
+      newCols.AddColumn(entryColumn, entryColName);
+
+      loopManager->RegisterCustomColumn(entryColumn);
 
       // Declare return type to the interpreter, for future use by jitted actions
       auto retTypeDeclaration = "namespace __tdf" + std::to_string(loopManager->GetID()) + " { using " +
@@ -1505,9 +1510,14 @@ private:
       auto slotColGen = [](unsigned int slot) { return slot; };
       using NewColSlot_t = RDFDetail::RCustomColumn<decltype(slotColGen), RDFDetail::CustomColExtraArgs::Slot>;
 
+      auto slotColumn = std::make_shared<NewColSlot_t>(slotColName, std::move(slotColGen), newCols.GetNames(), loopManager->GetNSlots(),
+                                        newCols);
+
       newCols.AddName(slotColName);
-      newCols.AddColumn(std::make_shared<NewColSlot_t>(slotColName, std::move(slotColGen), newCols.GetNames(), loopManager->GetNSlots(),
-                                        newCols), slotColName);
+      newCols.AddColumn(slotColumn, slotColName);
+
+      loopManager->RegisterCustomColumn(slotColumn);
+
       fCustomColumns = std::move(newCols);
 
        // Declare return type to the interpreter, for future use by jitted actions
@@ -1668,10 +1678,15 @@ private:
                                       std::string(name) + "_type = " + retTypeName + "; }";
       gInterpreter->Declare(retTypeDeclaration.c_str());
 
+
       RDFInternal::RBookedCustomColumns newCols(newColumns);
+
+      auto newColumn = std::make_shared<NewCol_t>(name, std::move(expression), validColumnNames, loopManager->GetNSlots(),
+                                    newCols);
+      loopManager->RegisterCustomColumn(newColumn);
+
       newCols.AddName(name);
-      newCols.AddColumn(std::make_shared<NewCol_t>(name, std::move(expression), validColumnNames, loopManager->GetNSlots(),
-                                    newCols), name);
+      newCols.AddColumn(newColumn, name);
 
       RInterface<Proxied> newInterface(fProxiedPtr, fImplWeakPtr,
                                        std::move(newCols),
@@ -1824,8 +1839,9 @@ protected:
 
    template <typename... ColumnTypes, std::size_t... S>
    RDFInternal::RBookedCustomColumns CheckAndFillDSColumns(ColumnNames_t validCols, std::index_sequence<S...>, TTraits::TypeList<ColumnTypes...>){
+      auto lm = GetLoopManager();
          return fDataSource
-            ? RDFInternal::AddDSColumns(validCols, fCustomColumns, *fDataSource, GetLoopManager()->GetNSlots(),
+            ? RDFInternal::AddDSColumns(*lm, validCols, fCustomColumns, *fDataSource, lm->GetNSlots(),
                                         std::index_sequence_for<ColumnTypes...>(), TTraits::TypeList<ColumnTypes...>())
             : fCustomColumns;
    }

@@ -149,6 +149,8 @@ class RLoopManager {
    /// Used, for example, to jit objects in a namespace reserved for this computation graph
    const unsigned int fID = GetNextID();
 
+   std::vector<std::weak_ptr<RCustomColumnBase>> fCustomColumns; ///< The loopmanager tracks all columns created, without owning them.
+
    void RunEmptySourceMT();
    void RunEmptySource();
    void RunTreeProcessorMT();
@@ -196,6 +198,10 @@ public:
    const std::map<std::string, std::string> &GetAliasMap() const { return fAliasColumnNameMap; }
    void RegisterCallback(ULong64_t everyNEvents, std::function<void(unsigned int)> &&f);
    unsigned int GetID() const { return fID; }
+   void RegisterCustomColumn(const std::weak_ptr<RCustomColumnBase> &column){
+      fCustomColumns.push_back(column);
+   }
+
 };
 
 class RCustomColumnBase {
@@ -453,11 +459,7 @@ public:
    ~RAction() { fHelper.Finalize(); }
 
    void Initialize() final {
-      for (auto &column : fCustomColumns.GetColumns()) {
-         column.second->InitNode();
-      }
       fHelper.Initialize();
-
    }
 
    void InitSlot(TTreeReader *r, unsigned int slot) final

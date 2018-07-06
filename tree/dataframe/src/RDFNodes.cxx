@@ -95,12 +95,7 @@ std::string RCustomColumnBase::GetName() const
 
 void RCustomColumnBase::InitNode()
 {
-   // TODO: This method is called by each filter and action on all their columns. It may happend that it is called
-   // multiple time on the same column.
    fLastCheckedEntry = std::vector<Long64_t>(fNSlots, -1);
-   for (auto &column : fCustomColumns.GetColumns()) {
-      column.second->InitNode();
-   }
 }
 
 void RJittedCustomColumn::InitSlot(TTreeReader *r, unsigned int slot)
@@ -167,10 +162,6 @@ void RFilterBase::FillReport(ROOT::RDF::RCutFlowReport &rep) const
 
 void RFilterBase::InitNode()
 {
-   for (auto &column : fCustomColumns.GetColumns()) {
-      column.second->InitNode();
-   }
-
    fLastCheckedEntry = std::vector<Long64_t>(fNSlots, -1);
    if (!fName.empty()) // if this is a named filter we care about its report count
       ResetReportCount();
@@ -519,6 +510,12 @@ void RLoopManager::InitNodeSlots(TTreeReader *r, unsigned int slot)
 void RLoopManager::InitNodes()
 {
    EvalChildrenCounts();
+   for (auto column : fCustomColumns){
+      if (auto sColumn = column.lock())
+         sColumn->InitNode();
+      else
+         std::cout <<"Unlockable" <<std::endl;
+   }
    for (auto &filter : fBookedFilters)
       filter->InitNode();
    for (auto &range : fBookedRanges)

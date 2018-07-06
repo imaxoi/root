@@ -280,7 +280,7 @@ std::vector<bool> FindUndefinedDSColumns(const ColumnNames_t &requestedCols, con
 using ColumnNames_t = ROOT::Detail::RDF::ColumnNames_t;
 
 template <typename T>
-void AddDSColumnsHelper(std::string_view name, RDFInternal::RBookedCustomColumns &currentCols, RDataSource &ds, unsigned int nSlots)
+void AddDSColumnsHelper(RLoopManager &lm, std::string_view name, RDFInternal::RBookedCustomColumns &currentCols, RDataSource &ds, unsigned int nSlots)
 {
    auto readers = ds.GetColumnReaders<T>(name);
    auto getValue = [readers](unsigned int slot) { return *readers[slot]; };
@@ -289,6 +289,7 @@ void AddDSColumnsHelper(std::string_view name, RDFInternal::RBookedCustomColumns
    auto newCol =
       std::make_shared<NewCol_t>(name, std::move(getValue), ColumnNames_t{}, nSlots, currentCols, /*isDSColumn=*/true);
 
+   lm.RegisterCustomColumn(newCol);
    currentCols.AddName(name);
    currentCols.AddColumn(newCol, name);
 }
@@ -296,7 +297,7 @@ void AddDSColumnsHelper(std::string_view name, RDFInternal::RBookedCustomColumns
 /// Take list of column names that must be defined, current map of custom columns, current list of defined column names, and return a new map of custom columns (with the new datasource columns added to it)
 template <typename... ColumnTypes, std::size_t... S>
 RDFInternal::RBookedCustomColumns
-AddDSColumns(const std::vector<std::string> &requiredCols, const RDFInternal::RBookedCustomColumns &currentCols,
+AddDSColumns(RLoopManager &lm, const std::vector<std::string> &requiredCols, const RDFInternal::RBookedCustomColumns &currentCols,
              RDataSource &ds, unsigned int nSlots, std::index_sequence<S...>, TTraits::TypeList<ColumnTypes...>)
 {
 
@@ -308,7 +309,7 @@ AddDSColumns(const std::vector<std::string> &requiredCols, const RDFInternal::RB
       auto newColumns(currentCols);
 
       // hack to expand a template parameter pack without c++17 fold expressions.
-      int expander[] = {(mustBeDefined[S] ? AddDSColumnsHelper<ColumnTypes>(requiredCols[S], newColumns, ds, nSlots)
+      int expander[] = {(mustBeDefined[S] ? AddDSColumnsHelper<ColumnTypes>(lm, requiredCols[S], newColumns, ds, nSlots)
                                           : /*no-op*/ ((void)0),
                          0)..., 0};
       (void)expander; // avoid unused variable warnings
@@ -330,7 +331,7 @@ void JitFilterHelper(F &&f, const ColumnNames_t &cols, std::string_view name, RJ
    auto &lm = *jittedFilter->GetLoopManagerUnchecked(); // RLoopManager must exist at this time
    auto ds = lm.GetDataSource();
 
-   auto newColumns = ds ? RDFInternal::AddDSColumns(cols, *customColumns, *ds, lm.GetNSlots(),
+   auto newColumns = ds ? RDFInternal::AddDSColumns(lm, cols, *customColumns, *ds, lm.GetNSlots(),
                                                     std::make_index_sequence<nColumns>(), ColTypes_t())
                         : *customColumns;
 
@@ -351,7 +352,7 @@ void JitDefineHelper(F &&f, const ColumnNames_t &cols, std::string_view name, RL
    constexpr auto nColumns = ColTypes_t::list_size;
 
    auto ds = lm->GetDataSource();
-   auto newColumns = ds ? RDFInternal::AddDSColumns(cols, *customColumns, *ds, lm->GetNSlots(),
+   auto newColumns = ds ? RDFInternal::AddDSColumns(*lm, cols, *customColumns, *ds, lm->GetNSlots(),
                                                     std::make_index_sequence<nColumns>(), ColTypes_t())
                         : *customColumns;
 
@@ -374,7 +375,7 @@ void CallBuildAndBook(PrevNodeType &prevNode, const ColumnNames_t &bl, const uns
    constexpr auto nColumns = ColTypes_t::list_size;
    auto ds = loopManager.GetDataSource();
 
-   auto newColumns = ds ? RDFInternal::AddDSColumns(bl, *customColumns, *ds, loopManager.GetNSlots(),
+   auto newColumns = ds ? RDFInternal::AddDSColumns(loopManager, bl, *customColumns, *ds, loopManager.GetNSlots(),
                                                     std::make_index_sequence<nColumns>(), ColTypes_t())
                         : *customColumns;
 
