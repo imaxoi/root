@@ -38,6 +38,7 @@
 #include "ROOT/RResultPtr.hxx"
 #include "ROOT/RSnapshotOptions.hxx"
 #include "ROOT/TypeTraits.hxx"
+#include "ROOT/RDFDisplayer.hxx"
 #include "RtypesCore.h" // for ULong64_t
 #include "TAxis.h"
 #include "TChain.h"
@@ -1491,6 +1492,23 @@ public:
       auto action = std::make_unique<Action_t>(Helper(std::forward<Helper>(h)), columns, fProxiedPtr);
       lm->Book(action.get());
       return MakeResultPtr(resPtr, lm, std::move(action));
+   }
+
+   template <typename FirstColumn, typename... OtherColumns> // need FirstColumn to disambiguate overloads
+   RResultPtr<RDFInternal::RDisplayer> Display(const ColumnNames_t &columnList)
+   {
+      if (ROOT::IsImplicitMTEnabled())
+         throw std::runtime_error("Range was called with ImplicitMT enabled. Multi-thread ranges are not supported.");
+
+      auto displayer = std::make_shared<RDFInternal::RDisplayer>(columnList);
+      return CreateAction<RDFInternal::ActionTags::Display, FirstColumn, OtherColumns...>(columnList, displayer);
+   }
+
+   //- Jit overload
+   RResultPtr<void> Display(const ColumnNames_t &columnList)
+   {
+      std::shared_ptr<void> noResult;
+      return CreateAction<RDFInternal::ActionTags::Display, RDFDetail::TInferType>(columnList, noResult, columnList.size());
    }
 
 private:

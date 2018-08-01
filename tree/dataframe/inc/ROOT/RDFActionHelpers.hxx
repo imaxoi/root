@@ -19,6 +19,7 @@
 #include <string>
 #include <type_traits>
 #include <vector>
+#include <iomanip>
 
 #include "Compression.h"
 #include "ROOT/RIntegerSequence.hxx"
@@ -31,6 +32,7 @@
 #include "ROOT/RSnapshotOptions.hxx"
 #include "ROOT/TThreadedObject.hxx"
 #include "ROOT/TypeTraits.hxx"
+#include "ROOT/RDFDisplayer.hxx"
 #include "RtypesCore.h"
 #include "TBranch.h"
 #include "TClassEdit.h"
@@ -747,6 +749,42 @@ extern template void StdDevHelper::Exec(unsigned int, const std::vector<double> 
 extern template void StdDevHelper::Exec(unsigned int, const std::vector<char> &);
 extern template void StdDevHelper::Exec(unsigned int, const std::vector<int> &);
 extern template void StdDevHelper::Exec(unsigned int, const std::vector<unsigned int> &);
+
+class DisplayHelper : public RActionImpl<DisplayHelper> {
+private:
+   const std::shared_ptr<RDisplayer> displayerHelper;
+
+   template <typename T>
+   bool wrapper(const T &t){
+         displayerHelper->AddToRow(t);
+      return true;
+   }
+
+public:
+   DisplayHelper(const std::shared_ptr<RDisplayer> &d): displayerHelper(d){}
+   DisplayHelper(DisplayHelper &&) = default;
+   DisplayHelper(const DisplayHelper &) = delete;
+   void InitTask(TTreeReader *, unsigned int) {}
+
+   template <typename FirstColumn, typename... OtherColumns>
+   void Exec(unsigned int slot, FirstColumn first, OtherColumns... columns)
+   {
+      bool array[] = { wrapper(first), wrapper(columns)... };
+   }
+
+
+   void Initialize() {
+   }
+
+   void Finalize(){
+   }
+};
+
+extern template void DisplayHelper::Exec(unsigned int, const std::vector<float> &);
+extern template void DisplayHelper::Exec(unsigned int, const std::vector<double> &);
+extern template void DisplayHelper::Exec(unsigned int, const std::vector<char> &);
+extern template void DisplayHelper::Exec(unsigned int, const std::vector<int> &);
+extern template void DisplayHelper::Exec(unsigned int, const std::vector<unsigned int> &);
 
 /// Helper function for SnapshotHelper and SnapshotHelperMT. It creates new branches for the output TTree of a Snapshot.
 template <typename T>

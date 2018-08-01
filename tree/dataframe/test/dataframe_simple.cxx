@@ -660,6 +660,12 @@ TEST_P(RDFSimpleTests, StandardDeviationEmpty)
    EXPECT_DOUBLE_EQ(*stdDev, 0);
 }
 
+TEST_P(RDFSimpleTests, Display)
+{
+RDataFrame rd1(8);
+*rd1.Display<int>({"tdfentry_"});
+}
+
 // run single-thread tests
 INSTANTIATE_TEST_CASE_P(Seq, RDFSimpleTests, ::testing::Values(false));
 

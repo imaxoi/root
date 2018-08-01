@@ -288,6 +288,119 @@ void RResultPtr<T>::TriggerRun()
    df->Run();
 }
 
+//- Specialization
+template <>
+class RResultPtr<void> {
+   // private using declarations
+   using SPTLM_t = std::shared_ptr<RDFDetail::RLoopManager>;
+   using WPTLM_t = std::weak_ptr<RDFDetail::RLoopManager>;
+   using ShrdPtrBool_t = std::shared_ptr<bool>;
+
+   // friend declarations
+   template <typename T1>
+   friend RResultPtr<T1>
+   RDFDetail::MakeResultPtr(const std::shared_ptr<T1> &, const SPTLM_t &, RDFInternal::RActionBase *);
+   template <typename T1>
+   friend std::pair<RResultPtr<T1>, std::shared_ptr<RDFInternal::RActionBase *>>
+   RDFDetail::MakeResultPtr(const std::shared_ptr<T1> &, const SPTLM_t &);
+   template <class T1, class T2>
+   friend bool operator==(const RResultPtr<T1> &lhs, const RResultPtr<T2> &rhs);
+   template <class T1, class T2>
+   friend bool operator!=(const RResultPtr<T1> &lhs, const RResultPtr<T2> &rhs);
+   template <class T1>
+   friend bool operator==(const RResultPtr<T1> &lhs, std::nullptr_t rhs);
+   template <class T1>
+   friend bool operator==(std::nullptr_t lhs, const RResultPtr<T1> &rhs);
+   template <class T1>
+   friend bool operator!=(const RResultPtr<T1> &lhs, std::nullptr_t rhs);
+   template <class T1>
+   friend bool operator!=(std::nullptr_t lhs, const RResultPtr<T1> &rhs);
+
+   /// \cond HIDDEN_SYMBOLS
+   template <typename V, bool hasBeginEnd = TTraits::HasBeginAndEnd<V>::value>
+   struct TIterationHelper {
+      using Iterator_t = void;
+      void GetBegin(const V &) { static_assert(sizeof(V) == 0, "It does not make sense to ask begin for this class."); }
+      void GetEnd(const V &) { static_assert(sizeof(V) == 0, "It does not make sense to ask end for this class."); }
+   };
+
+   template <typename V>
+   struct TIterationHelper<V, true> {
+      using Iterator_t = decltype(std::begin(std::declval<V>()));
+      static Iterator_t GetBegin(const V &v) { return std::begin(v); };
+      static Iterator_t GetEnd(const V &v) { return std::end(v); };
+   };
+   /// \endcond
+
+   /// State registered also in the RLoopManager until the event loop is executed
+   ShrdPtrBool_t fReadiness = std::make_shared<bool>(false);
+   WPTLM_t fImplWeakPtr; ///< Points to the RLoopManager at the root of the functional graph
+   /// Shared_ptr to a _pointer_ to the RDF action that produces this result. It is set at construction time for
+   /// non-jitted actions, and at jitting time for jitted actions (at the time of writing, this means right
+   /// before the event-loop).
+   // N.B. what's on the heap is the _pointer_ to RActionBase, we are _not_ taking shared ownership of a RAction.
+   // This cannot be a unique_ptr because that would disallow copy-construction of TResultProxies.
+   // It cannot be just a pointer to RActionBase because we need something to store in the callback callable that will
+   // be passed to RLoopManager _before_ the pointer to RActionBase is set in the case of jitted actions.
+   std::shared_ptr<RDFInternal::RActionBase *> fActionPtrPtr;
+
+   /// Triggers the event loop in the RLoopManager instance to which it's associated via the fImplWeakPtr
+   void TriggerRun()
+   {
+      auto df = fImplWeakPtr.lock();
+      if (!df) {
+         throw std::runtime_error("The main RDataFrame is not reachable: did it go out of scope?");
+      }
+      df->Run();
+   }
+
+   /// Get the pointer to the encapsulated result.
+   /// Ownership is not transferred to the caller.
+   /// Triggers event loop and execution of all actions booked in the associated RLoopManager.
+   void Get()
+   {
+      if (!*fReadiness)
+         TriggerRun();
+   }
+
+   RResultPtr(const std::shared_ptr<void>&, const ShrdPtrBool_t &readiness, const SPTLM_t &loopManager,
+              RDFInternal::RActionBase *actionPtr = nullptr)
+      : fReadiness(readiness), fImplWeakPtr(loopManager),
+        fActionPtrPtr(new (RDFInternal::RActionBase *)(actionPtr))
+   {
+   }
+
+   std::shared_ptr<RDFInternal::RActionBase *> GetActionPtrPtr() const { return fActionPtrPtr; }
+
+public:
+   static constexpr ULong64_t kOnce = 0ull; ///< Convenience definition to express a callback must be executed once
+
+   RResultPtr() = default;
+   RResultPtr(const RResultPtr &) = default;
+   RResultPtr(RResultPtr &&) = default;
+   RResultPtr &operator=(const RResultPtr &) = default;
+   RResultPtr &operator=(RResultPtr &&) = default;
+   //- explicit operator bool() const { return bool(fObjPtr); }
+
+   /// Get a const reference to the encapsulated object.
+   /// Triggers event loop and execution of all actions booked in the associated RLoopManager.
+   const void GetValue() { Get(); }
+
+   /// Get the pointer to the encapsulated object.
+   /// Triggers event loop and execution of all actions booked in the associated RLoopManager.
+   void GetPtr() { return Get(); }
+
+   /// Get a pointer to the encapsulated object.
+   /// Triggers event loop and execution of all actions booked in the associated RLoopManager.
+   void operator*() { return Get(); }
+
+   /// Get a pointer to the encapsulated object.
+   /// Ownership is not transferred to the caller.
+   /// Triggers event loop and execution of all actions booked in the associated RLoopManager.
+   void operator->() { return Get(); }
+
+};
+
 template <class T1, class T2>
 bool operator==(const RResultPtr<T1> &lhs, const RResultPtr<T2> &rhs)
 {
