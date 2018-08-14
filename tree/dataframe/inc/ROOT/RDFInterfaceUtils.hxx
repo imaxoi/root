@@ -215,9 +215,9 @@ std::unique_ptr<RActionBase>
 BuildAction(const ColumnNames_t &bl, const std::shared_ptr<RDisplayer> &d, const unsigned int nSlots,
             std::shared_ptr<PrevNodeType> prevNode, ActionTags::Display)
 {
-   using Helper_t = DisplayHelper;
+   using Helper_t = DisplayHelper<PrevNodeType>;
    using Action_t = RAction<Helper_t, PrevNodeType, TTraits::TypeList<BranchTypes...>>;
-   return std::make_unique<Action_t>(Helper_t(d), bl, prevNode);
+   return std::make_unique<Action_t>(Helper_t(d, prevNode), bl, prevNode);
 }
 
 /****** end BuildAndBook ******/

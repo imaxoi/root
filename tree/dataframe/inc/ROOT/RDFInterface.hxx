@@ -1495,12 +1495,12 @@ public:
    }
 
    template <typename FirstColumn, typename... OtherColumns> // need FirstColumn to disambiguate overloads
-   RResultPtr<RDFInternal::RDisplayer> Display(const ColumnNames_t &columnList)
+   RResultPtr<RDFInternal::RDisplayer> Display(const ColumnNames_t &columnList, const int &nRows = 5)
    {
       if (ROOT::IsImplicitMTEnabled())
          throw std::runtime_error("Display was called with ImplicitMT enabled. Multi-thread Display is not supported.");
 
-      auto displayer = std::make_shared<RDFInternal::RDisplayer>(columnList,  GetColumnTypeNamesList(columnList));
+      auto displayer = std::make_shared<RDFInternal::RDisplayer>(columnList,  GetColumnTypeNamesList(columnList), nRows);
       return CreateAction<RDFInternal::ActionTags::Display, FirstColumn, OtherColumns...>(columnList, displayer);
    }
 

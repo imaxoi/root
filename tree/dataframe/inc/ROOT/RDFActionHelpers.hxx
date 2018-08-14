@@ -749,12 +749,17 @@ extern template void StdDevHelper::Exec(unsigned int, const std::vector<char> &)
 extern template void StdDevHelper::Exec(unsigned int, const std::vector<int> &);
 extern template void StdDevHelper::Exec(unsigned int, const std::vector<unsigned int> &);
 
-class DisplayHelper : public RActionImpl<DisplayHelper> {
+template <typename PrevNodeType>
+class DisplayHelper : public RActionImpl<DisplayHelper<PrevNodeType>> {
 private:
    const std::shared_ptr<RDisplayer> fDisplayerHelper;
+   const std::shared_ptr<PrevNodeType> fPrevNode;
 
 public:
-   DisplayHelper(const std::shared_ptr<RDisplayer> &d): fDisplayerHelper(d){}
+   DisplayHelper(const std::shared_ptr<RDisplayer> &d, const std::shared_ptr<PrevNodeType> &prevNode)
+      : fDisplayerHelper(d), fPrevNode(prevNode)
+   {
+   }
    DisplayHelper(DisplayHelper &&) = default;
    DisplayHelper(const DisplayHelper &) = delete;
    void InitTask(TTreeReader *, unsigned int) {}
@@ -762,22 +767,17 @@ public:
    template <typename FirstColumn, typename... OtherColumns>
    void Exec(unsigned int slot, FirstColumn first, OtherColumns... columns)
    {
-        fDisplayerHelper->AddRow(first, columns...);
+      fDisplayerHelper->AddRow(first, columns...);
+      if(!fDisplayerHelper->HasNext()){
+         fPrevNode->StopProcessing();
+      }
+
    }
 
+   void Initialize() {}
 
-   void Initialize() {
-   }
-
-   void Finalize(){
-   }
+   void Finalize() {}
 };
-
-extern template void DisplayHelper::Exec(unsigned int, const std::vector<float> &);
-extern template void DisplayHelper::Exec(unsigned int, const std::vector<double> &);
-extern template void DisplayHelper::Exec(unsigned int, const std::vector<char> &);
-extern template void DisplayHelper::Exec(unsigned int, const std::vector<int> &);
-extern template void DisplayHelper::Exec(unsigned int, const std::vector<unsigned int> &);
 
 /// Helper function for SnapshotHelper and SnapshotHelperMT. It creates new branches for the output TTree of a Snapshot.
 template <typename T>

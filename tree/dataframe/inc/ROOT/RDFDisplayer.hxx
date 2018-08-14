@@ -17,6 +17,7 @@
 #include <vector>
 #include <string>
 #include <sstream>
+//- TODO!!! THIS SHOULD NOT BE IN ROOT INTERNAL!
 
 namespace ROOT {
 namespace Internal {
@@ -31,44 +32,87 @@ private:
 
    Types_t fTypes;
    std::vector<std::string> fRepresentations;
+   std::vector<bool> fIsCollection;
 
    std::vector<Row_t> fTable;
    std::vector<unsigned short> fWidths;
    int fNColumns;
    int fCurrentRow = 0;
+   int fNextRow = 0;
    int fCurrentColumn = 0;
+
+   int fEntries;
 
    template <typename T>
    bool AddInterpreterString(std::stringstream &stream, T &element, const int &index)
    {
       stream << "*((std::string*)" << &(fRepresentations[index]) << ") = cling::printValue((" << fTypes[index] << "*)"
              << PrettyPrintAddr(&element) << ");";
-      return true;
+      return IsContainer<T>::value;
+   }
+
+   std::vector<std::string> Split(const std::string &s, const std::string &delimiter)
+   {
+      std::vector<std::string> tokens;
+      auto start = 0U;
+      auto end = s.find(delimiter);
+      while (end != std::string::npos) {
+         tokens.push_back(s.substr(start, end - start));
+         start = end + delimiter.length();
+         end = s.find(delimiter, start);
+      }
+
+      tokens.push_back(s.substr(start, end));
+      return tokens;
    }
 
    void AddToRow(const std::string &stringEle)
    {
-      if (fWidths[fCurrentColumn] < stringEle.length()){
-         fWidths[fCurrentColumn]= stringEle.length();
+      if (fWidths[fCurrentColumn] < stringEle.length()) {
+         fWidths[fCurrentColumn] = stringEle.length();
       }
 
-      fTable[fCurrentRow][fCurrentColumn]  = stringEle;
+      fTable[fCurrentRow][fCurrentColumn] = stringEle;
       ++fCurrentColumn;
-      if(fCurrentColumn == fNColumns){
-         ++fCurrentRow;
-         fCurrentColumn=0;
+      CheckAndSwitchRow();
+   }
+
+   void AddCollectionToRow(const std::vector<std::string> &collection)
+   {
+      auto row = fCurrentRow;
+      for (auto it = collection.begin(); it != collection.end(); ++it) {
+         auto stringEle = *it;
+         if (fWidths[fCurrentColumn] < stringEle.length()) {
+            fWidths[fCurrentColumn] = stringEle.length();
+         }
+         fTable[row][fCurrentColumn] = stringEle;
+         ++row;
+         if (std::next(it) != collection.end()) {
+            fTable.push_back(Row_t(fNColumns));
+         }
+      }
+      ++fCurrentColumn;
+      fNextRow = row;
+      CheckAndSwitchRow();
+   }
+
+   void CheckAndSwitchRow()
+   {
+      if (fCurrentColumn == fNColumns) {
+         fCurrentRow = fNextRow;
+         fCurrentColumn = 0;
+         fNextRow = fCurrentRow + 1;
          fTable.push_back(Row_t(fNColumns));
       }
    }
 
-
 public:
-   RDisplayer(const Row_t &columnNames, const Types_t &types)
+   RDisplayer(const Row_t &columnNames, const Types_t &types, const int &entries)
       : fWidths(columnNames.size(), 0), fNColumns(columnNames.size()), fTypes(types),
-        fRepresentations(columnNames.size())
+        fRepresentations(columnNames.size()), fEntries(entries)
    {
       fTable.push_back(Row_t(columnNames.size()));
-      for (auto name : columnNames){
+      for (auto name : columnNames) {
          AddToRow(name);
       }
    }
@@ -77,28 +121,52 @@ public:
    void AddRow(FirstColumn first, OtherColumns... column)
    {
       std::stringstream calc;
-      bool unpack[] = {AddInterpreterString(calc, first, 0), AddInterpreterString(calc, column, 1)...};
+      fIsCollection = {AddInterpreterString(calc, first, 0), AddInterpreterString(calc, column, 1)...};
+
       TInterpreter::EErrorCode errorCode;
       gInterpreter->Calc(calc.str().c_str(), &errorCode);
       if (TInterpreter::EErrorCode::kNoError != errorCode) {
-         std::string msg = "Cannot jit during Display call. Interpreter error code is " + std::to_string(errorCode) + ".";
+         std::string msg =
+            "Cannot jit during Display call. Interpreter error code is " + std::to_string(errorCode) + ".";
          throw std::runtime_error(msg);
       }
 
-      for(auto name : fRepresentations){
-         AddToRow(name);
+      for (int i = 0; i < fNColumns; ++i) {
+         if (fIsCollection[i]) {
+            fRepresentations[i] = fRepresentations[i].substr(2, fRepresentations[i].size() - 4);
+            AddCollectionToRow(Split(fRepresentations[i], ", "));
+         } else {
+            AddToRow(fRepresentations[i]);
+         }
       }
-
-
+      fEntries--;
    };
 
-   void Print() const {
-      for (auto row : fTable){
-         for (int i = 0; i< row.size(); ++i){
-            std::cout << std::left << std::setw(fWidths[i]) << std::setfill(fgSeparator) << row[i] <<" | ";
+   bool HasNext(){
+      return fEntries > 0;
+   }
+
+   void Print() const
+   {
+      for (auto row : fTable) {
+         std::stringstream stringRow;
+         for (int i = 0; i < row.size(); ++i) {
+            stringRow << std::left << std::setw(fWidths[i]) << std::setfill(fgSeparator) << row[i] << " | ";
          }
-         std::cout <<std::endl;
+         std::cout << stringRow.str() << std::endl;
       }
+   }
+
+   std::string AsString() const
+   {
+      std::stringstream stringRepresentation;
+      for (auto row : fTable) {
+         for (int i = 0; i < row.size(); ++i) {
+            stringRepresentation << std::left << std::setw(fWidths[i]) << std::setfill(fgSeparator) << row[i] << " | ";
+         }
+         stringRepresentation << "\n";
+      }
+      return stringRepresentation.str();
    }
 };
 
