@@ -51,7 +51,6 @@
 namespace ROOT {
 namespace Detail {
 namespace RDF {
-
 template <typename Helper>
 class RActionImpl
 {
@@ -752,16 +751,10 @@ extern template void StdDevHelper::Exec(unsigned int, const std::vector<unsigned
 
 class DisplayHelper : public RActionImpl<DisplayHelper> {
 private:
-   const std::shared_ptr<RDisplayer> displayerHelper;
-
-   template <typename T>
-   bool wrapper(const T &t){
-         displayerHelper->AddToRow(t);
-      return true;
-   }
+   const std::shared_ptr<RDisplayer> fDisplayerHelper;
 
 public:
-   DisplayHelper(const std::shared_ptr<RDisplayer> &d): displayerHelper(d){}
+   DisplayHelper(const std::shared_ptr<RDisplayer> &d): fDisplayerHelper(d){}
    DisplayHelper(DisplayHelper &&) = default;
    DisplayHelper(const DisplayHelper &) = delete;
    void InitTask(TTreeReader *, unsigned int) {}
@@ -769,7 +762,7 @@ public:
    template <typename FirstColumn, typename... OtherColumns>
    void Exec(unsigned int slot, FirstColumn first, OtherColumns... columns)
    {
-      bool array[] = { wrapper(first), wrapper(columns)... };
+        fDisplayerHelper->AddRow(first, columns...);
    }
 
 

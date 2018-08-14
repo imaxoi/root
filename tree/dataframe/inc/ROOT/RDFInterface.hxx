@@ -1498,17 +1498,10 @@ public:
    RResultPtr<RDFInternal::RDisplayer> Display(const ColumnNames_t &columnList)
    {
       if (ROOT::IsImplicitMTEnabled())
-         throw std::runtime_error("Range was called with ImplicitMT enabled. Multi-thread ranges are not supported.");
+         throw std::runtime_error("Display was called with ImplicitMT enabled. Multi-thread Display is not supported.");
 
-      auto displayer = std::make_shared<RDFInternal::RDisplayer>(columnList);
+      auto displayer = std::make_shared<RDFInternal::RDisplayer>(columnList,  GetColumnTypeNamesList(columnList));
       return CreateAction<RDFInternal::ActionTags::Display, FirstColumn, OtherColumns...>(columnList, displayer);
-   }
-
-   //- Jit overload
-   RResultPtr<void> Display(const ColumnNames_t &columnList)
-   {
-      std::shared_ptr<void> noResult;
-      return CreateAction<RDFInternal::ActionTags::Display, RDFDetail::TInferType>(columnList, noResult, columnList.size());
    }
 
 private:
@@ -1587,6 +1580,24 @@ private:
          throw std::runtime_error(text);
       }
       return selectedColumns;
+   }
+
+   std::vector<std::string> GetColumnTypeNamesList(const ColumnNames_t &columnList){
+      std::vector<std::string> types;
+
+      auto df = GetLoopManager();
+      auto tree = df->GetTree();
+      const auto nsID = df->GetID();
+      const auto &customCols = df->GetCustomColumnNames();
+      const auto dontConvertVector = false;
+      const auto validCols = GetValidatedColumnNames(columnList.size(), columnList);
+
+      for(auto column : columnList){
+         const auto isCustom = std::find(customCols.begin(), customCols.end(), column) != customCols.end();
+         types.push_back(RDFInternal::ColumnName2ColumnTypeName(column, nsID, tree, fDataSource, isCustom, dontConvertVector));
+      }
+      return types;
+
    }
 
    /// Return string containing fully qualified type name of the node pointed by fProxied.

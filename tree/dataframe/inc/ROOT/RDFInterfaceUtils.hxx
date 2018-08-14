@@ -211,14 +211,13 @@ BuildAction(const ColumnNames_t &bl, const std::shared_ptr<double> &stdDeviation
 
 // Display action
 template <typename... BranchTypes, typename PrevNodeType>
-RActionBase *BuildAndBook(const ColumnNames_t &bl, const std::shared_ptr<RDisplayer> &d, const unsigned int nSlots,
-                          RLoopManager &loopManager, PrevNodeType &prevNode, ActionTags::Display)
+std::unique_ptr<RActionBase>
+BuildAction(const ColumnNames_t &bl, const std::shared_ptr<RDisplayer> &d, const unsigned int nSlots,
+            std::shared_ptr<PrevNodeType> prevNode, ActionTags::Display)
 {
    using Helper_t = DisplayHelper;
    using Action_t = RAction<Helper_t, PrevNodeType, TTraits::TypeList<BranchTypes...>>;
-   auto action = std::make_shared<Action_t>(Helper_t(d), bl, prevNode);
-   loopManager.Book(action);
-   return action.get();
+   return std::make_unique<Action_t>(Helper_t(d), bl, prevNode);
 }
 
 /****** end BuildAndBook ******/
