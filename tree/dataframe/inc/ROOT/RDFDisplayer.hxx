@@ -32,6 +32,7 @@ private:
 
    Types_t fTypes;
    std::vector<std::string> fRepresentations;
+   std::vector<std::vector<std::string>> fCollectionsRepresentations;
    std::vector<bool> fIsCollection;
 
    std::vector<Row_t> fTable;
@@ -43,13 +44,28 @@ private:
 
    int fEntries;
 
-   template <typename T>
-   bool AddInterpreterString(std::stringstream &stream, T &element, const int &index)
+   template <typename T, typename std::enable_if<!IsContainer<T>::value, int>::type = 0>
+   bool AddToInterpreter(std::stringstream &stream, T &element, const int &index)
    {
       stream << "*((std::string*)" << &(fRepresentations[index]) << ") = cling::printValue((" << fTypes[index] << "*)"
              << PrettyPrintAddr(&element) << ");";
-      return IsContainer<T>::value;
+      return false;
    }
+
+   template <typename T, typename std::enable_if<IsContainer<T>::value, int>::type = 0>
+   bool AddToInterpreter(std::stringstream &stream, T &collection, const int &index)
+   {
+      int collectionSize = std::distance(std::begin(collection), std::end(collection));
+      fCollectionsRepresentations[index] = std::vector<std::string>(collectionSize);
+
+      for(int i=0; i<collectionSize; ++i){
+         std::cout << PrettyPrintAddr(&(collection[i]))<<std::endl;
+         stream << "*((std::string*)" << &(fCollectionsRepresentations[index][i]) << ") = cling::printValue((" << fTypes[index] << "*)"
+                << PrettyPrintAddr(&(collection[i])) << ");";
+      }
+      return true;
+   }
+
 
    std::vector<std::string> Split(const std::string &s, const std::string &delimiter)
    {
@@ -109,7 +125,7 @@ private:
 public:
    RDisplayer(const Row_t &columnNames, const Types_t &types, const int &entries)
       : fWidths(columnNames.size(), 0), fNColumns(columnNames.size()), fTypes(types),
-        fRepresentations(columnNames.size()), fEntries(entries)
+        fRepresentations(columnNames.size()), fEntries(entries), fCollectionsRepresentations(columnNames.size())
    {
       fTable.push_back(Row_t(columnNames.size()));
       for (auto name : columnNames) {
@@ -121,7 +137,7 @@ public:
    void AddRow(FirstColumn first, OtherColumns... column)
    {
       std::stringstream calc;
-      fIsCollection = {AddInterpreterString(calc, first, 0), AddInterpreterString(calc, column, 1)...};
+      fIsCollection = {AddToInterpreter(calc, first, 0), AddToInterpreter(calc, column, 1)...};
 
       TInterpreter::EErrorCode errorCode;
       gInterpreter->Calc(calc.str().c_str(), &errorCode);
@@ -133,12 +149,12 @@ public:
 
       for (int i = 0; i < fNColumns; ++i) {
          if (fIsCollection[i]) {
-            fRepresentations[i] = fRepresentations[i].substr(2, fRepresentations[i].size() - 4);
-            AddCollectionToRow(Split(fRepresentations[i], ", "));
+            AddCollectionToRow(fCollectionsRepresentations[i]);
          } else {
             AddToRow(fRepresentations[i]);
          }
       }
+
       fEntries--;
    };
 
